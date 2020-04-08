@@ -1,0 +1,30 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import sys
+sys.path.add(os.path.dirname(sys.argv[0]) + '/../lib')
+sys.path.add(os.environ['HOME'] + '/git/dse.d/fontforge-utilities/lib')
+import ffutils
+
+import fontforge
+import argparse
+import re
+
+class Fore2Back(ffutils.FontForgeScript):
+    def run(self):
+        self.load()
+        self.fore2back()
+        self.save()
+    def fore2back(self):
+        for glyphName in self.font:
+            glyph = self.font[glyphName]
+            ffutils.fore2Back(glyph)
+
+parser = argparse.ArgumentParser(
+    description = 'Move foreground contours to background'
+)
+parser.add_argument('source_filename')
+parser.add_argument('dest_filename')
+args = parser.parse_args()
+f2b = Fore2Back(args)
+f2b.run()
