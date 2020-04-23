@@ -1,6 +1,15 @@
 # https://fontforge.org/docs/scripting/python/fontforge.html
 
-import fontforge, os, re, string, argparse, json, psMat, unicodedata, math, sys
+import fontforge
+import os
+import re
+import string
+import argparse
+import json
+import psMat
+import unicodedata
+import math
+import sys
 
 class FontForgeScript:
     #
