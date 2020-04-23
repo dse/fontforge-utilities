@@ -135,14 +135,12 @@ def generateBraille(font, codepoint):
     try:
         charName = unicodedata.name(char)
     except ValueError:
-        sys.stderr.write("%d: not a valid codepoint." % codepoint)
-        return
+        raise Exception("invalid codepoint: U+%04X (%d)" % (codepoint, codepoint))
 
     matchBlank = re.search(' BLANK$', charName)
     matchDots = re.search('-([0-9]+)$', charName)
     if (not matchBlank) and (not matchDots):
-        sys.stderr.write("%d: Glyph name '%s' does not look like a Unicode Braille glyph name." % (codepoint, charName))
-        return
+        raise Exception("invalid braille glyph name: U+%04X %s (%d)" % (codepoint, charName, codepoint))
     if matchDots:
         dotString = matchDots.group(1)
 
