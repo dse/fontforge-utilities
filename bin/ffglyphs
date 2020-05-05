@@ -309,7 +309,7 @@ class FontForgeGlyphs:
                         print('            <td data-codepoint-empty data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s (not present)"></td>' %
                               (codepoint, codepoint, codepoint, html.escape(name)))
                     else:
-                        line += (' %-3s' % displayChar)
+                        line += ('    ')
             if self.format == 'html':
                 print('        </tr>')
             else:
