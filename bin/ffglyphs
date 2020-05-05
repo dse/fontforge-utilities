@@ -19,11 +19,13 @@ class FontForgeGlyphs:
             self.listBlockCoveragePercentages()
         else:
             self.listGlyphs()
+
     def load(self):
         self.font = fontforge.open(self.sourceFilename)
+
     def listGlyphs(self):
-        if self.format == 'html2':
-            self.listGlyphsTable2()
+        if self.isCompact:
+            self.listCompactGlyphsTable()
             return
         glyphs = [self.font[name] for name in self.font]
         if self.sort:
@@ -49,6 +51,23 @@ class FontForgeGlyphs:
         if self.format == 'html':
             self.endHTMLTable()
 
+    def displayChar(self, codepoint):
+        try:
+            displayChar = unichr(codepoint)
+        except NameError:
+            displayChar = chr(codepoint)
+        if codepoint < 32:
+            displayChar = '???'
+        elif codepoint == 32:
+            displayChar = 'SPC'
+        elif codepoint == 127:
+            displayChar = 'DEL'
+        elif codepoint >= 128 and codepoint < 160:
+            displayChar = '???'
+        elif codepoint == 160:
+            displayChar = 'NBS'
+        return displayChar
+
     def listCharacter(self, codepoint):
         try:
             char = unichr(codepoint)
@@ -58,16 +77,7 @@ class FontForgeGlyphs:
             name = unicodedata.name(char)
         except ValueError:
             name = '<none>'
-        if codepoint < 32:
-            char = '???'
-        elif codepoint == 32:
-            char = 'SPC'
-        elif codepoint == 127:
-            char = 'DEL'
-        elif codepoint >= 128 and codepoint < 160:
-            char = '???'
-        elif codepoint == 160:
-            char = 'NBSP'
+        char = self.displayChar(codepoint)
         hexCodepoint = self.uPlusHex(codepoint)
         if self.isTabSeparatedValues():
             line = [hexCodepoint, codepoint, char, name]
@@ -131,16 +141,7 @@ class FontForgeGlyphs:
                     continue
             if not (codepoint in codepointsCovered):
                 continue
-            if codepoint < 32:
-                char = '???'
-            elif codepoint == 32:
-                char = 'SPC'
-            elif codepoint == 127:
-                char = 'DEL'
-            elif codepoint >= 128 and codepoint < 160:
-                char = '???'
-            elif codepoint == 160:
-                char = 'NBSP'
+            char = self.displayChar(codepoint)
             hexCodepoint = self.uPlusHex(codepoint)
             if self.isTabSeparatedValues():
                 line = [hexCodepoint, codepoint, char, name]
@@ -272,19 +273,21 @@ class FontForgeGlyphs:
                 coverage = coverage + 1
         return (total, coverage, blockRange)
 
-    def listGlyphsTable2(self):
+    def listCompactGlyphsTable(self):
         glyphs = [self.font[name] for name in self.font]
         codepoints = [glyph.unicode for glyph in glyphs]
         codepoints.sort()
         codepointLines = list(set([int(codepoint / 16) * 16 for codepoint in codepoints]))
         codepointLines.sort()
-        if self.format == 'html2':
-            self.startHTMLTable2()
+        if self.format == 'html':
+            self.startCompactHTMLTable()
         for codepointLine in codepointLines:
-            sys.stderr.write("U+%04X\n" % codepointLine)
             codepointRange = range(codepointLine, codepointLine + 16)
-            print('        <tr>')
-            print('            <td>U+%04X</td>' % codepointLine)
+            if self.format == 'html':
+                print('        <tr>')
+                print('            <td>U+%04X</td>' % codepointLine)
+            else:
+                line = '%-8s ' % ('U+%04X' % codepointLine)
             for codepoint in codepointRange:
                 try:
                     char = unichr(codepoint)
@@ -294,15 +297,26 @@ class FontForgeGlyphs:
                     name = unicodedata.name(char)
                 except ValueError:
                     name = '<none>'
+                displayChar = self.displayChar(codepoint)
                 if codepoint in codepoints:
-                    print('            <td data-codepoint-full data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s">%s</td>' %
-                          (codepoint, codepoint, codepoint, html.escape(name), html.escape(char)))
+                    if self.format == 'html':
+                        print('            <td data-codepoint-full data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s">%s</td>' %
+                              (codepoint, codepoint, codepoint, html.escape(name), html.escape(char)))
+                    else:
+                        line += (' %-3s' % displayChar)
                 else:
-                    print('            <td data-codepoint-empty data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s (not present)"></td>' %
-                          (codepoint, codepoint, codepoint, html.escape(name)))
-            print('        </tr>')
-        if self.format == 'html2':
-            self.endHTMLTable2()
+                    if self.format == 'html':
+                        print('            <td data-codepoint-empty data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s (not present)"></td>' %
+                              (codepoint, codepoint, codepoint, html.escape(name)))
+                    else:
+                        line += (' %-3s' % displayChar)
+            if self.format == 'html':
+                print('        </tr>')
+            else:
+                print(line)
+        if self.format == 'html':
+            self.endCompactHTMLTable()
+
     def __init__(self, args):
         self.args = None
         self.sourceFilename = None
@@ -313,8 +327,10 @@ class FontForgeGlyphs:
         self.htmlClass = None
         self.listPercentages = False
         self.headingTagName = 'h2'
+        self.isCompact = False
         if args != None:
             self.setFromArgs(args)
+
     def setFromArgs(self, args):
         self.args = args
         if args.source_filename != None:
@@ -331,10 +347,15 @@ class FontForgeGlyphs:
             self.listPercentages = args.percentages
         if args.heading_tag_name != None:
             self.headingTagName = args.heading_tag_name
+        if args.compact != None:
+            self.isCompact = args.compact
+
     def uPlusHex(self, codepoint):
         return "U+%04X" % codepoint
+
     def isTabSeparatedValues(self):
         return self.format == 'tab-separated-values' or self.format == 'tsv'
+
     def startHTMLTable(self):
         if self.inHTMLTable:
             return
@@ -354,6 +375,7 @@ class FontForgeGlyphs:
         print('        </tr>')
         print('    </thead>')
         print('    <tbody>')
+
     def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None):
         self.startHTMLTable()
         print('        <tr>')
@@ -364,13 +386,15 @@ class FontForgeGlyphs:
         if block != None:
             print('            <td data-title="Block">%s</td>' % html.escape(block))
         print('        </tr>')
+
     def endHTMLTable(self):
         if not self.inHTMLTable:
             return
         self.inHTMLTable = False
         print('    </tbody>')
         print('</table>')
-    def startHTMLTable2(self):
+
+    def startCompactHTMLTable(self):
         if self.inHTMLTable:
             return
         self.inHTMLTable = True
@@ -386,7 +410,8 @@ class FontForgeGlyphs:
         print('        </tr>')
         print('    </thead>')
         print('    <tbody>')
-    def endHTMLTable2(self):
+
+    def endCompactHTMLTable(self):
         if not self.inHTMLTable:
             return
         self.inHTMLTable = False
@@ -403,6 +428,7 @@ parser.add_argument('--list-blocks', action = 'store_true')
 parser.add_argument('--class', type = str, dest = 'html_class')
 parser.add_argument('--percentages', action = 'store_true')
 parser.add_argument('--heading-tag-name', type = str)
+parser.add_argument('--compact', action = 'store_true')
 
 args = parser.parse_args()
 ffg = FontForgeGlyphs(args)
