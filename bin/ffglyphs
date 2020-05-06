@@ -15,19 +15,39 @@ from ffutils import UnicodeBlocks
 class FontForgeGlyphs:
     def run(self):
         self.load()
-        if self.willListPercentages:
-            self.listPercentages()
+        if self.willListCoverageSummary:
+            self.listCoverageSummary()
+        elif self.willListCoverageDetail:
+            self.listCoverageDetail()
         else:
             self.listGlyphs()
 
     def load(self):
         self.font = fontforge.open(self.sourceFilename)
 
+        self.glyphs = [self.font[name] for name in self.font]
+        self.sortedGlyphs = self.glyphs.copy()
+        self.sortedGlyphs.sort(key = lambda glyph: glyph.unicode)
+
+        self.codepointsCovered = [glyph.unicode for glyph in glyphs]
+
+        self.blockNamesCovered = list(set(
+            [UnicodeBlocks.block(codepoint) for codepoint in self.codepointsCovered]
+        ))
+        self.allBlockNames = UnicodeBlocks.blockNames()
+
+        self.allBlockNames.append('WGL4')
+        self.blockNamesCovered.append('WGL4')
+        self.allBlockNames.append('Code Page 437')
+        self.blockNamesCovered.append('Code Page 437')
+        self.allBlockNames.append('Code Page 437 Extended')
+        self.blockNamesCovered.append('Code Page 437 Extended')
+
     def listGlyphs(self):
         if self.isCompact:
             self.listCompactGlyphsTable()
             return
-        glyphs = [self.font[name] for name in self.font]
+        glyphs = self.glyphs
         if self.willSort:
             glyphs.sort(key = lambda glyph: glyph.unicode)
         lastBlock = None
@@ -41,6 +61,7 @@ class FontForgeGlyphs:
                 if self.willListBlocks and self.willSort:
                     if self.format == 'text':
                         print("# " + block)
+                        print('')
                     elif self.format == 'html':
                         self.endHTMLTable()
                         print('<%s>' % self.headingTagName)
@@ -50,6 +71,8 @@ class FontForgeGlyphs:
             self.listCharacter(codepoint)
         if self.format == 'html':
             self.endHTMLTable()
+        elif self.format == 'text':
+            print('')
 
     def displayCharacter(self, codepoint):
         try:
@@ -68,7 +91,7 @@ class FontForgeGlyphs:
             displayCharacter = 'NBS'
         return displayCharacter
 
-    def listCharacter(self, codepoint):
+    def listCharacter(self, codepoint, listYesOrNo = False):
         try:
             char = unichr(codepoint)
         except NameError:
@@ -80,50 +103,72 @@ class FontForgeGlyphs:
         char = self.displayCharacter(codepoint)
         hexCodepoint = self.uPlusHex(codepoint)
         if self.isTabSeparatedValues():
-            line = [hexCodepoint, codepoint, char, name]
+            if listYesOrNo:
+                line = [hexCodepoint, codepoint, char, yesOrNo, name]
+            else:
+                line = [hexCodepoint, codepoint, char, name]
             if self.willListBlocks:
                 line += [block]
             print("\t".join(line))
         elif self.format == 'html':
-            if self.willListBlocks and not self.willSort:
-                self.printHTMLRow(hexCodepoint, codepoint, char, name, block)
+            if listYesOrNo:
+                if self.willListBlocks and not self.willSort:
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo)
+                else:
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo)
             else:
-                self.printHTMLRow(hexCodepoint, codepoint, char, name)
+                if self.willListBlocks and not self.willSort:
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block)
+                else:
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name)
         else:
             if self.willListBlocks and not self.willSort:
-                print("%-8s  %d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
+                print("%-8s  %7d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
             else:
-                print("%-8s  %d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
+                print("%-8s  %7d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
 
-    def listGlyphsAndCoverages(self):
+    def listCoverageDetail(self):
         glyphs = [self.font[name] for name in self.font]
         glyphs.sort(key = lambda glyph: glyph.unicode)
 
         codepointsCovered = [glyph.unicode for glyph in glyphs]
         blockNamesCovered = list(set([UnicodeBlocks.block(codepoint) for codepoint in codepointsCovered]))
-        blockNames = UnicodeBlocks.blockNames()
+        allBlockNames = UnicodeBlocks.blockNames()
 
-        blockNames.append('WGL4')
+        allBlockNames.append('WGL4')
         blockNamesCovered.append('WGL4')
+        allBlockNames.append('Code Page 437')
+        blockNamesCovered.append('Code Page 437')
+        allBlockNames.append('Code Page 437 Extended')
+        blockNamesCovered.append('Code Page 437 Extended')
 
-        for blockName in blockNames:
+        for blockName in allBlockNames:
             if blockName in blockNamesCovered:
-                self.listGlyphsAndCoverageForBlock(blockName)
+                self.listCoverageDetailForBlock(blockName)
 
-    def listGlyphsAndCoverageForBlock(self, blockName):
+    def listCoverageDetailForBlock(self, blockName, includeControls = False):
+        glyphs = self.glyphs
+        codepointsCovered = self.codepointsCovered
+
         if self.format == 'text':
-            print("# " + block)
+            print("# " + blockName)
             print('')
         elif self.format == 'html':
             self.endHTMLTable()
             print('<%s>' % self.headingTagName)
-            print('    %s' % html.escape(block))
+            print('    %s' % html.escape(blockName))
             print('</%s>' % self.headingTagName)
             print('')
+
+        self.listCoverageSummaryForBlock(blockName)
 
         blockRange = None
         if blockName == 'WGL4':
             blockRange = UnicodeBlocks.WGL4
+        elif blockName == 'Code Page 437':
+            blockRange = UnicodeBlocks.CodePage437
+        elif blockName == 'Code Page 437 Extended':
+            blockRange = UnicodeBlocks.CodePage437Extended
         else:
             blockRange = UnicodeBlocks.blockRange(blockName)
 
@@ -139,44 +184,49 @@ class FontForgeGlyphs:
             if not includeControls:
                 if name == '<control>':
                     continue
-            if not (codepoint in codepointsCovered):
-                continue
             char = self.displayCharacter(codepoint)
             hexCodepoint = self.uPlusHex(codepoint)
+            yesOrNo = 'yes' if (codepoint in codepointsCovered) else 'no'
             if self.isTabSeparatedValues():
-                line = [hexCodepoint, codepoint, char, name]
+                line = [hexCodepoint, codepoint, char, yesOrNo, name]
                 if self.willListBlocks:
                     line += [block]
                 print("\t".join(line))
             elif self.format == 'html':
                 if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint, char, name, block)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo)
                 else:
-                    self.printHTMLRow(hexCodepoint, codepoint, char, name)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo)
             else:
                 if self.willListBlocks and not self.willSort:
-                    print("%-8s  %d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
+                    print("%-8s  %7d  %-4s  %-3s  %s (%s)" % (hexCodepoint, codepoint, char, yesOrNo, name, block))
                 else:
-                    print("%-8s  %d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
+                    print("%-8s  %7d  %-4s  %-3s  %s" % (hexCodepoint, codepoint, char, yesOrNo, name))
+        if self.format == 'text':
+            print('')
 
-    def listPercentages(self):
+    def listCoverageSummary(self):
         glyphs = [self.font[name] for name in self.font]
         codepointsCovered = [glyph.unicode for glyph in glyphs]
         blockNamesCovered = list(set([UnicodeBlocks.block(codepoint) for codepoint in codepointsCovered]))
-        blockNames = UnicodeBlocks.blockNames()
+        allBlockNames = UnicodeBlocks.blockNames()
 
-        blockNames.append('WGL4')
+        allBlockNames.append('WGL4')
         blockNamesCovered.append('WGL4')
+        allBlockNames.append('Code Page 437')
+        blockNamesCovered.append('Code Page 437')
+        allBlockNames.append('Code Page 437 Extended')
+        blockNamesCovered.append('Code Page 437 Extended')
 
-        for blockName in blockNames:
-            if blockName in blockNamesCovered:
+        for blockName in self.allBlockNames:
+            if blockName in self.blockNamesCovered:
                 if self.format == 'html':
                     self.startBlockCoverageTable()
-                self.listBlockCoveragePercentage(blockName, asTableRow = True)
+                self.listCoverageSummaryForBlock(blockName, asTableRow = True)
         if self.format == 'html':
             self.endBlockCoverageTable()
 
-    def listBlockCoveragePercentage(self, blockName, asTableRow = False):
+    def listCoverageSummaryForBlock(self, blockName, asTableRow = False):
         (total, coverage, blockRange) = self.computeBlockCoverage(blockName)
         data = {
             'blockName': blockName,
@@ -252,6 +302,10 @@ class FontForgeGlyphs:
         blockRange = None
         if blockName == 'WGL4':
             blockRange = UnicodeBlocks.WGL4
+        elif blockName == 'Code Page 437':
+            blockRange = UnicodeBlocks.CodePage437
+        elif blockName == 'Code Page 437 Extended':
+            blockRange = UnicodeBlocks.CodePage437Extended
         else:
             blockRange = UnicodeBlocks.blockRange(blockName)
         total = 0
@@ -325,9 +379,10 @@ class FontForgeGlyphs:
         self.willListBlocks = False
         self.inHTMLTable = False
         self.htmlClass = None
-        self.willListPercentages = False
+        self.willListCoverageSummary = False
         self.headingTagName = 'h2'
         self.isCompact = False
+        self.willListCoverageDetail = False
         if args != None:
             self.setFromArgs(args)
 
@@ -344,11 +399,13 @@ class FontForgeGlyphs:
         if args.html_class != None:
             self.htmlClass = args.html_class
         if args.percentages != None:
-            self.willListPercentages = args.percentages
+            self.willListCoverageSummary = args.percentages
         if args.heading_tag_name != None:
             self.headingTagName = args.heading_tag_name
         if args.compact != None:
             self.isCompact = args.compact
+        if args.with_coverage != None:
+            self.willListCoverageDetail = args.with_coverage
 
     def uPlusHex(self, codepoint):
         return "U+%04X" % codepoint
@@ -376,12 +433,14 @@ class FontForgeGlyphs:
         print('    </thead>')
         print('    <tbody>')
 
-    def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None):
+    def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None, yesOrNo = None):
         self.startHTMLTable()
         print('        <tr>')
         print('            <td data-title="Codepoint">%s</td>' % hexCodepoint)
         print('            <td data-title="Decimal">%d</td>' % codepoint)
         print('            <td data-title="Symbol">%s</td>' % html.escape(char))
+        if yesOrNo != None:
+            print('            <td data-title="Covered">%s</td>' % html.escape(yesOrNo))
         print('            <td data-title="Name">%s</td>' % html.escape(name))
         if block != None:
             print('            <td data-title="Block">%s</td>' % html.escape(block))
@@ -429,6 +488,7 @@ parser.add_argument('--class', type = str, dest = 'html_class')
 parser.add_argument('--percentages', action = 'store_true')
 parser.add_argument('--heading-tag-name', type = str)
 parser.add_argument('--compact', action = 'store_true')
+parser.add_argument('--with-coverage', action = 'store_true')
 
 args = parser.parse_args()
 ffg = FontForgeGlyphs(args)
