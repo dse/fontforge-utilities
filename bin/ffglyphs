@@ -7,6 +7,7 @@ import unicodedata
 import html
 import sys
 import os
+import re
 
 sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
 sys.path.append(os.environ['HOME'] + '/git/dse.d/fontforge-utilities/lib')
@@ -29,7 +30,7 @@ class FontForgeGlyphs:
         self.sortedGlyphs = self.glyphs.copy()
         self.sortedGlyphs.sort(key = lambda glyph: glyph.unicode)
 
-        self.codepointsCovered = [glyph.unicode for glyph in glyphs]
+        self.codepointsCovered = [glyph.unicode for glyph in self.glyphs]
 
         self.blockNamesCovered = list(set(
             [UnicodeBlocks.block(codepoint) for codepoint in self.codepointsCovered]
@@ -47,9 +48,7 @@ class FontForgeGlyphs:
         if self.isCompact:
             self.listCompactGlyphsTable()
             return
-        glyphs = self.glyphs
-        if self.willSort:
-            glyphs.sort(key = lambda glyph: glyph.unicode)
+        glyphs = self.sortedGlyphs if self.willSort else self.glyphs
         lastBlock = None
         block = None
         for glyph in glyphs:
@@ -64,7 +63,10 @@ class FontForgeGlyphs:
                         print('')
                     elif self.format == 'html':
                         self.endHTMLTable()
-                        print('<%s>' % self.headingTagName)
+                        print('<%s id="%s">' % (
+                            self.headingTagName,
+                            self.blockNameToAnchorId(block)
+                        ))
                         print('    %s' % html.escape(block))
                         print('</%s>' % self.headingTagName)
                 lastBlock = block
@@ -108,6 +110,7 @@ class FontForgeGlyphs:
             else:
                 line = [hexCodepoint, codepoint, char, name]
             if self.willListBlocks:
+                block = UnicodeBlocks.block(codepoint)
                 line += [block]
             print("\t".join(line))
         elif self.format == 'html':
@@ -128,28 +131,11 @@ class FontForgeGlyphs:
                 print("%-8s  %7d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
 
     def listCoverageDetail(self):
-        glyphs = [self.font[name] for name in self.font]
-        glyphs.sort(key = lambda glyph: glyph.unicode)
-
-        codepointsCovered = [glyph.unicode for glyph in glyphs]
-        blockNamesCovered = list(set([UnicodeBlocks.block(codepoint) for codepoint in codepointsCovered]))
-        allBlockNames = UnicodeBlocks.blockNames()
-
-        allBlockNames.append('WGL4')
-        blockNamesCovered.append('WGL4')
-        allBlockNames.append('Code Page 437')
-        blockNamesCovered.append('Code Page 437')
-        allBlockNames.append('Code Page 437 Extended')
-        blockNamesCovered.append('Code Page 437 Extended')
-
-        for blockName in allBlockNames:
-            if blockName in blockNamesCovered:
+        for blockName in self.allBlockNames:
+            if blockName in self.blockNamesCovered:
                 self.listCoverageDetailForBlock(blockName)
 
     def listCoverageDetailForBlock(self, blockName, includeControls = False):
-        glyphs = self.glyphs
-        codepointsCovered = self.codepointsCovered
-
         if self.format == 'text':
             print("# " + blockName)
             print('')
@@ -186,7 +172,7 @@ class FontForgeGlyphs:
                     continue
             char = self.displayCharacter(codepoint)
             hexCodepoint = self.uPlusHex(codepoint)
-            yesOrNo = 'yes' if (codepoint in codepointsCovered) else 'no'
+            yesOrNo = 'yes' if (codepoint in self.codepointsCovered) else 'no'
             if self.isTabSeparatedValues():
                 line = [hexCodepoint, codepoint, char, yesOrNo, name]
                 if self.willListBlocks:
@@ -206,18 +192,6 @@ class FontForgeGlyphs:
             print('')
 
     def listCoverageSummary(self):
-        glyphs = [self.font[name] for name in self.font]
-        codepointsCovered = [glyph.unicode for glyph in glyphs]
-        blockNamesCovered = list(set([UnicodeBlocks.block(codepoint) for codepoint in codepointsCovered]))
-        allBlockNames = UnicodeBlocks.blockNames()
-
-        allBlockNames.append('WGL4')
-        blockNamesCovered.append('WGL4')
-        allBlockNames.append('Code Page 437')
-        blockNamesCovered.append('Code Page 437')
-        allBlockNames.append('Code Page 437 Extended')
-        blockNamesCovered.append('Code Page 437 Extended')
-
         for blockName in self.allBlockNames:
             if blockName in self.blockNamesCovered:
                 if self.format == 'html':
@@ -296,9 +270,6 @@ class FontForgeGlyphs:
         print('</table>')
 
     def computeBlockCoverage(self, blockName, includeControls = False):
-        glyphs = [self.font[name] for name in self.font]
-        codepointsCovered = [glyph.unicode for glyph in glyphs]
-
         blockRange = None
         if blockName == 'WGL4':
             blockRange = UnicodeBlocks.WGL4
@@ -323,13 +294,12 @@ class FontForgeGlyphs:
                 if name == '<control>':
                     continue
             total += 1
-            if codepoint in codepointsCovered:
+            if codepoint in self.codepointsCovered:
                 coverage = coverage + 1
         return (total, coverage, blockRange)
 
     def listCompactGlyphsTable(self):
-        glyphs = [self.font[name] for name in self.font]
-        codepoints = [glyph.unicode for glyph in glyphs]
+        codepoints = [glyph.unicode for glyph in self.glyphs]
         codepoints.sort()
         codepointLines = list(set([int(codepoint / 16) * 16 for codepoint in codepoints]))
         codepointLines.sort()
@@ -477,6 +447,12 @@ class FontForgeGlyphs:
         print('    </tbody>')
         print('</table>')
 
+    def blockNameToAnchorId(self, blockName):
+        result = blockName.replace(' ', '-')
+        result = re.sub(r'[^- [:alnum:]]', '-', result)
+        result = 'Unicode-Block--' + result
+        return result
+
 parser = argparse.ArgumentParser(
     description = 'List a font\'s glyphs.'
 )
@@ -485,10 +461,10 @@ parser.add_argument('--no-sort', action = 'store_true')
 parser.add_argument('--format', type = str)
 parser.add_argument('--list-blocks', action = 'store_true')
 parser.add_argument('--class', type = str, dest = 'html_class')
-parser.add_argument('--percentages', action = 'store_true')
+parser.add_argument('--percentages', '--coverage-summary', action = 'store_true')
 parser.add_argument('--heading-tag-name', type = str)
 parser.add_argument('--compact', action = 'store_true')
-parser.add_argument('--with-coverage', action = 'store_true')
+parser.add_argument('--with-coverage', '--coverage-detail', action = 'store_true')
 
 args = parser.parse_args()
 ffg = FontForgeGlyphs(args)
