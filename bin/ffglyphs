@@ -20,6 +20,8 @@ class FontForgeGlyphs:
             self.listCoverageSummary()
         elif self.willListCoverageDetail:
             self.listCoverageDetail()
+        elif self.willListTableOfContents:
+            self.listTableOfContents()
         else:
             self.listGlyphs()
 
@@ -74,6 +76,25 @@ class FontForgeGlyphs:
         if self.format == 'html':
             self.endHTMLTable()
         elif self.format == 'text':
+            print('')
+
+    def listTableOfContents(self):
+        if self.format == 'html':
+            print('<ul>')
+        for blockName in self.allBlockNames:
+            if blockName in self.blockNamesCovered:
+                if self.format == 'html':
+                    print('    <li>');
+                    print('        <a href="#%s">%s</a>' % (
+                        self.blockNameToAnchorId(blockName),
+                        html.escape(blockName)
+                    ))
+                    print('    </li>');
+                else:
+                    print('-   %s' % blockName)
+        if self.format == 'html':
+            print('</ul>')
+        else:
             print('')
 
     def displayCharacter(self, codepoint):
@@ -141,7 +162,10 @@ class FontForgeGlyphs:
             print('')
         elif self.format == 'html':
             self.endHTMLTable()
-            print('<%s>' % self.headingTagName)
+            print('<%s id="%s">' % (
+                self.headingTagName,
+                self.blockNameToAnchorId(blockName)
+            ))
             print('    %s' % html.escape(blockName))
             print('</%s>' % self.headingTagName)
             print('')
@@ -353,6 +377,7 @@ class FontForgeGlyphs:
         self.headingTagName = 'h2'
         self.isCompact = False
         self.willListCoverageDetail = False
+        self.willListTableOfContents = False
         if args != None:
             self.setFromArgs(args)
 
@@ -376,6 +401,8 @@ class FontForgeGlyphs:
             self.isCompact = args.compact
         if args.with_coverage != None:
             self.willListCoverageDetail = args.with_coverage
+        if args.table_of_contents != None:
+            self.willListTableOfContents = args.table_of_contents
 
     def uPlusHex(self, codepoint):
         return "U+%04X" % codepoint
@@ -465,6 +492,7 @@ parser.add_argument('--percentages', '--coverage-summary', action = 'store_true'
 parser.add_argument('--heading-tag-name', type = str)
 parser.add_argument('--compact', action = 'store_true')
 parser.add_argument('--with-coverage', '--coverage-detail', action = 'store_true')
+parser.add_argument('--table-of-contents', action = 'store_true')
 
 args = parser.parse_args()
 ffg = FontForgeGlyphs(args)
