@@ -15,7 +15,7 @@ from ffutils import UnicodeBlocks
 class FontForgeGlyphs:
     def run(self):
         self.load()
-        if self.listPercentages:
+        if self.willListPercentages:
             self.listBlockCoveragePercentages()
         else:
             self.listGlyphs()
@@ -28,7 +28,7 @@ class FontForgeGlyphs:
             self.listCompactGlyphsTable()
             return
         glyphs = [self.font[name] for name in self.font]
-        if self.sort:
+        if self.willSort:
             glyphs.sort(key = lambda glyph: glyph.unicode)
         lastBlock = None
         block = None
@@ -38,7 +38,7 @@ class FontForgeGlyphs:
                 continue
             block = UnicodeBlocks.block(codepoint)
             if block != lastBlock:
-                if self.listBlocks and self.sort:
+                if self.willListBlocks and self.willSort:
                     if self.format == 'text':
                         print("# " + block)
                     elif self.format == 'html':
@@ -81,16 +81,16 @@ class FontForgeGlyphs:
         hexCodepoint = self.uPlusHex(codepoint)
         if self.isTabSeparatedValues():
             line = [hexCodepoint, codepoint, char, name]
-            if self.listBlocks:
+            if self.willListBlocks:
                 line += [block]
             print("\t".join(line))
         elif self.format == 'html':
-            if self.listBlocks and not self.sort:
+            if self.willListBlocks and not self.willSort:
                 self.printHTMLRow(hexCodepoint, codepoint, char, name, block)
             else:
                 self.printHTMLRow(hexCodepoint, codepoint, char, name)
         else:
-            if self.listBlocks and not self.sort:
+            if self.willListBlocks and not self.willSort:
                 print("%-8s  %d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
             else:
                 print("%-8s  %d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
@@ -145,16 +145,16 @@ class FontForgeGlyphs:
             hexCodepoint = self.uPlusHex(codepoint)
             if self.isTabSeparatedValues():
                 line = [hexCodepoint, codepoint, char, name]
-                if self.listBlocks:
+                if self.willListBlocks:
                     line += [block]
                 print("\t".join(line))
             elif self.format == 'html':
-                if self.listBlocks and not self.sort:
+                if self.willListBlocks and not self.willSort:
                     self.printHTMLRow(hexCodepoint, codepoint, char, name, block)
                 else:
                     self.printHTMLRow(hexCodepoint, codepoint, char, name)
             else:
-                if self.listBlocks and not self.sort:
+                if self.willListBlocks and not self.willSort:
                     print("%-8s  %d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
                 else:
                     print("%-8s  %d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
@@ -322,10 +322,10 @@ class FontForgeGlyphs:
         self.sourceFilename = None
         self.source = True
         self.format = 'text'
-        self.listBlocks = False
+        self.willListBlocks = False
         self.inHTMLTable = False
         self.htmlClass = None
-        self.listPercentages = False
+        self.willListPercentages = False
         self.headingTagName = 'h2'
         self.isCompact = False
         if args != None:
@@ -336,15 +336,15 @@ class FontForgeGlyphs:
         if args.source_filename != None:
             self.sourceFilename = args.source_filename
         if args.no_sort != None:
-            self.sort = not args.no_sort
+            self.willSort = not args.no_sort
         if args.format != None:
             self.format = args.format
         if args.list_blocks != None:
-            self.listBlocks = args.list_blocks
+            self.willListBlocks = args.list_blocks
         if args.html_class != None:
             self.htmlClass = args.html_class
         if args.percentages != None:
-            self.listPercentages = args.percentages
+            self.willListPercentages = args.percentages
         if args.heading_tag_name != None:
             self.headingTagName = args.heading_tag_name
         if args.compact != None:
@@ -370,7 +370,7 @@ class FontForgeGlyphs:
         print('            <th>Decimal</th>')
         print('            <th>Symbol</th>')
         print('            <th>Name</th>')
-        if self.listBlocks and not self.sort:
+        if self.willListBlocks and not self.willSort:
             print('            <th>Block</th>')
         print('        </tr>')
         print('    </thead>')
