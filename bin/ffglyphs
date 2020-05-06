@@ -16,7 +16,7 @@ class FontForgeGlyphs:
     def run(self):
         self.load()
         if self.willListPercentages:
-            self.listBlockCoveragePercentages()
+            self.listPercentages()
         else:
             self.listGlyphs()
 
@@ -159,7 +159,7 @@ class FontForgeGlyphs:
                 else:
                     print("%-8s  %d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
 
-    def listBlockCoveragePercentages(self):
+    def listPercentages(self):
         glyphs = [self.font[name] for name in self.font]
         codepointsCovered = [glyph.unicode for glyph in glyphs]
         blockNamesCovered = list(set([UnicodeBlocks.block(codepoint) for codepoint in codepointsCovered]))
