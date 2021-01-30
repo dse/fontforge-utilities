@@ -72,7 +72,7 @@ class FontForgeGlyphs:
                         print('    %s' % html.escape(block))
                         print('</%s>' % self.headingTagName)
                 lastBlock = block
-            self.listCharacter(codepoint)
+            self.listCharacter(codepoint, isCovered = codepoint in self.codepointsCovered)
         if self.format == 'html':
             self.endHTMLTable()
         elif self.format == 'text':
@@ -114,7 +114,7 @@ class FontForgeGlyphs:
             displayCharacter = 'NBS'
         return displayCharacter
 
-    def listCharacter(self, codepoint, listYesOrNo = False):
+    def listCharacter(self, codepoint, listYesOrNo = False, isCovered = None):
         try:
             char = unichr(codepoint)
         except NameError:
@@ -137,14 +137,14 @@ class FontForgeGlyphs:
         elif self.format == 'html':
             if listYesOrNo:
                 if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
                 else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
             else:
                 if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, isCovered = isCovered)
                 else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, isCovered = isCovered)
         else:
             if self.willListBlocks and not self.willSort:
                 print("%-8s  %7d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
@@ -196,6 +196,7 @@ class FontForgeGlyphs:
                     continue
             char = self.displayCharacter(codepoint)
             hexCodepoint = self.uPlusHex(codepoint)
+            isCovered = codepoint in self.codepointsCovered
             yesOrNo = 'yes' if (codepoint in self.codepointsCovered) else 'no'
             if self.isTabSeparatedValues():
                 line = [hexCodepoint, codepoint, char, yesOrNo, name]
@@ -204,9 +205,9 @@ class FontForgeGlyphs:
                 print("\t".join(line))
             elif self.format == 'html':
                 if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
                 else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo)
+                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
             else:
                 if self.willListBlocks and not self.willSort:
                     print("%-8s  %7d  %-4s  %-3s  %s (%s)" % (hexCodepoint, codepoint, char, yesOrNo, name, block))
@@ -247,7 +248,14 @@ class FontForgeGlyphs:
         elif asTableRow:
             if self.format == 'html':
                 print('        <tr>');
-                print('            <td>%s</td>' % html.escape(blockName))
+                if self.hasAnchors:
+                    print('            <td><a href="%s#%s">%s<a></td>' % (
+                        self.anchorPageURL or '',
+                        self.blockNameToAnchorId(blockName),
+                        html.escape(blockName)
+                    ))
+                else:
+                    print('            <td>%s</td>' % html.escape(blockName))
                 print('            <td>U+%04X</td>' % blockRange[0])
                 print('            <td>U+%04X</td>' % blockRange[-1])
                 print('            <td>%d/%d</td>' % (coverage, total))
@@ -378,6 +386,8 @@ class FontForgeGlyphs:
         self.isCompact = False
         self.willListCoverageDetail = False
         self.willListTableOfContents = False
+        self.hasAnchors = False
+        self.anchorPageURL = None
         if args != None:
             self.setFromArgs(args)
 
@@ -403,6 +413,10 @@ class FontForgeGlyphs:
             self.willListCoverageDetail = args.with_coverage
         if args.table_of_contents != None:
             self.willListTableOfContents = args.table_of_contents
+        if args.with_anchors != None:
+            self.hasAnchors = args.with_anchors
+        if args.anchor_page_url != None:
+            self.anchorPageURL = args.anchor_page_url
 
     def uPlusHex(self, codepoint):
         return "U+%04X" % codepoint
@@ -430,9 +444,12 @@ class FontForgeGlyphs:
         print('    </thead>')
         print('    <tbody>')
 
-    def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None, yesOrNo = None):
+    def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None, yesOrNo = None, isCovered = None):
         self.startHTMLTable()
-        print('        <tr>')
+        if isCovered == None:
+            print('        <tr>')
+        else:
+            print('        <tr class="%s">' % ('is-covered' if isCovered else 'is-not-covered'))
         print('            <td data-title="Codepoint">%s</td>' % hexCodepoint)
         print('            <td data-title="Decimal">%d</td>' % codepoint)
         print('            <td data-title="Symbol">%s</td>' % html.escape(char))
@@ -493,6 +510,8 @@ parser.add_argument('--heading-tag-name', type = str)
 parser.add_argument('--compact', action = 'store_true')
 parser.add_argument('--with-coverage', '--coverage-detail', action = 'store_true')
 parser.add_argument('--table-of-contents', action = 'store_true')
+parser.add_argument('--with-anchors', action = 'store_true')
+parser.add_argument('--anchor-page-url', type = str)
 
 args = parser.parse_args()
 ffg = FontForgeGlyphs(args)

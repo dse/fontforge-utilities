@@ -11,6 +11,10 @@ import unicodedata
 import math
 import sys
 
+from codepage437 import CodePage437
+from codepage437extended import CodePage437Extended
+from wgl4 import WGL4
+
 class FontForgeScript:
     #
     # INVOCATION:
@@ -664,3 +668,7 @@ F0000..FFFFF; Supplementary Private Use Area-A
 
 # EOF
 ''')
+
+UnicodeBlocks.WGL4                = WGL4.codepoints
+UnicodeBlocks.CodePage437         = CodePage437.codepoints
+UnicodeBlocks.CodePage437Extended = CodePage437Extended.codepoints
