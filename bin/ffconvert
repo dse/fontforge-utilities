@@ -46,8 +46,12 @@ class FontForgeConvert:
     def write(self):
         if self.args.dest_filename != None:
             for filename in self.args.dest_filename:
-                print("Writing %s ..." % filename)
-                self.font.generate(filename)
+                if re.search(r'\.sfd$', filename):
+                    print("Saving SFD %s ..." % filename)
+                    self.font.save(filename)
+                else:
+                    print("Generating %s ..." % filename)
+                    self.font.generate(filename)
 
     def print(self):
         print("font name   = %s" % self.font.fontname)
