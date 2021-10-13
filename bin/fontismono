@@ -6,12 +6,13 @@ import sys
 
 result = True
 for filename in sys.argv[1:]:
-
+    fontResult = True
     font = fontforge.open(filename)
     print("==> {} <==".format(filename))
 
     if font.os2_panose[3] != 9:
         result = False
+        fontResult = False
         print("# incorrect panose value.  fourth value of tuple should be 9.")
         print("# panose is {}".format(font.os2_panose))
 
@@ -31,6 +32,7 @@ for filename in sys.argv[1:]:
 
     if len(glyphWidthCounts) != 1: # all glyph widths aren't the same
         result = False
+        fontResult = False
         hasMajority = False
         for width in glyphWidthCounts:
             if glyphWidthCounts[width] * 2 > glyphCount: # we have a majority
@@ -46,6 +48,11 @@ for filename in sys.argv[1:]:
                 break
         if not hasMajority:
             print("# glyph widths vary, with no particular width having a majority")
+
+    if fontResult:
+        print("# font should be detected as monospace")
+    else:
+        print("# font will likely not be detected as monospace")
 
 if not result:
     exit(1)
