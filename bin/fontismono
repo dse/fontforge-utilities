@@ -1,0 +1,50 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+
+result = True
+for filename in sys.argv[1:]:
+
+    font = fontforge.open(filename)
+
+    if font.os2_panose[3] != 9:
+        result = False
+        print("# incorrect panose value.  fourth value of tuple should be 9.")
+        print("# panose is {}".format(font.os2_panose))
+
+    glyphWidthCounts = {}       # count of glyphs by glyph width
+    glyphWidthArrays = {}       # array of glyphs by glyph width
+    glyphCount = 0              # count of glyphs in font
+    for glyph in font.glyphs():
+        name = glyph.glyphname
+        width = glyph.width
+        if width in glyphWidthCounts:
+            glyphWidthCounts[width] += 1
+            glyphWidthArrays[width].append(glyph)
+        else:
+            glyphWidthCounts[width] = 1
+            glyphWidthArrays[width] = [glyph]
+        glyphCount += 1
+
+    if len(glyphWidthCounts) != 1: # all glyph widths aren't the same
+        result = False
+        hasMajority = False
+        for width in glyphWidthCounts:
+            if glyphWidthCounts[width] * 2 > glyphCount: # we have a majority
+                hasMajority = True
+                print("# most glyphs are {} units wide.  exceptions are:".format(width))
+                for width2 in glyphWidthArrays:
+                    if width != width2:
+                        array = glyphWidthArrays[width2]
+                        for g in array:
+                            print("#     {} ({}) width is {}".format("U+%04X" % g.encoding,
+                                                                     g.glyphname,
+                                                                     g.width))
+                break
+        if not hasMajority:
+            print("# glyph widths vary, with no particular width having a majority")
+
+if not result:
+    exit(1)
