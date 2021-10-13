@@ -8,6 +8,7 @@ result = True
 for filename in sys.argv[1:]:
 
     font = fontforge.open(filename)
+    print("==> {} <==".format(filename))
 
     if font.os2_panose[3] != 9:
         result = False
