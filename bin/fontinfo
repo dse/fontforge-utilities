@@ -1,0 +1,92 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import re
+
+for filename in sys.argv[1:]:
+    print("==> %s <==" % filename)
+    font = fontforge.open(filename)
+
+    print("# meta");
+    print("    copyright:")
+    print(re.sub(r'^', '        > ', str(font.copyright), flags = re.M))
+    print("    comment:")
+    print(re.sub(r'^', '        > ', str(font.comment), flags = re.M))
+    print("    encoding:                    {}".format(font.encoding))
+    print("    version:                     {}".format(font.version))
+    print("    os2_vendor:                  {}".format(font.os2_vendor))
+    print("    os2_version:                 {}".format(font.os2_version))
+    print("# font name");
+    print("    fondname:                    {} (Mac)".format(font.fondname))
+    print("    fontname:                    {}".format(font.fontname))
+    print("    fullname:                    {}".format(font.fullname))
+    print("    familyname:                  {}".format(font.familyname))
+    print("    italicangle:                 {}".format(font.italicangle))
+    print("    weight:                      {}".format(font.weight))
+    print("    os2_weight:                  {}".format(font.os2_weight))
+    print("    os2_weight_width_slope_only: {}".format(font.os2_weight_width_slope_only))
+    print("    os2_family_class:            {}".format(font.os2_family_class))
+    print("    os2_fstype:                  {}".format(font.os2_fstype))
+    print("    os2_panose:                  {}".format(font.os2_panose))
+    print("    macstyle:                    {}".format(font.macstyle))
+    if font.macstyle >= 0:
+        if font.macstyle & 1 == 1:
+            print("    - Bold")
+        if font.macstyle & 2 == 2:
+            print("    - Italic")
+        if font.macstyle & 4 == 4:
+            print("    - Underline")
+        if font.macstyle & 8 == 8:
+            print("    - Outline")
+        if font.macstyle & 16 == 16:
+            print("    - Shadow")
+        if font.macstyle & 32 == 32:
+            print("    - Condensed")
+        if font.macstyle & 64 == 64:
+            print("    - Extended")
+
+    print("# metrics")
+    print("    em:                          {}".format(font.em))
+    print("    ascent:                      {}".format(font.ascent))
+    print("    descent:                     {}".format(font.descent))
+    print("    design_size:                 {} (in pica points)".format(font.design_size))
+    print("    capHeight:                   {}".format(font.capHeight))
+    print("    xHeight:                     {}".format(font.xHeight))
+    print("    os2_typoascent:              {}".format(font.os2_typoascent))
+    print("    os2_typoascent_add:          {}".format(font.os2_typoascent_add))
+    print("    os2_typodescent:             {}".format(font.os2_typodescent))
+    print("    os2_typodescent_add:         {}".format(font.os2_typodescent_add))
+    print("    os2_winascent:               {}".format(font.os2_winascent))
+    print("    os2_winascent_add:           {}".format(font.os2_winascent_add))
+    print("    os2_windescent:              {}".format(font.os2_windescent))
+    print("    os2_windescent_add:          {}".format(font.os2_windescent_add))
+    print("    os2_typolinegap:             {}".format(font.os2_typolinegap))
+    print("    vhea_linegap:                {}".format(font.vhea_linegap))
+    print("    os2_use_typo_metrics:        {}".format(font.os2_use_typo_metrics))
+    print("    os2_width:                   {}".format(font.os2_width))
+    print("# underline")
+    print("    upos:                        {}".format(font.upos))
+    print("    uwidth:                      {}".format(font.uwidth))
+    print("    sfnt_names:")
+    for tuple in font.sfnt_names:
+        print("        {}".format(tuple))
+
+# panose
+#   https://monotype.github.io/panose/pan1.htm
+#
+# 1. family kind = 2 for latin text
+# 2. serif style
+#        dse typewriter 0 = any
+#        ibm courier 0 = any
+# 3. weight
+#        5 = book
+# 4. proportion
+#        9 = monospaced
+# 5. contrast
+# 6. stroke variation
+# 7. arm style
+# 8. letterform
+# 9. midline
+# 10. x-height

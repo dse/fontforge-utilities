@@ -1,0 +1,845 @@
+font.activeLayer
+
+    Returns currently active layer in the font (as an integer). May be
+    set to an integer or a layer name to change the active layer.
+
+font.ascent
+
+    The font’s ascent
+
+font.bitmapSizes
+
+    A tuple with an entry for each bitmap strike attached to the
+    font. Each strike is identified by pixelsize (if the strike is a
+    grey scale font it will be indicated by
+    (bitmap-depth<<16)|pixelsize.
+
+    When setting this value pass in a tuple of the same format. Any
+    existing strike not specified in the tuple will be removed. Any
+    new sizes will be created (but not rasterized – use
+    font.regenBitmaps() for that).
+
+font.capHeight
+
+    (readonly) Computes the Cap Height (the height of capital letters
+    such as “E”). A negative number indicates the value could not be
+    computed (the font might have no capital letters because it was
+    lower case only, or didn’t include glyphs for a script with
+    capital letters).
+
+font.changed
+
+    Bit indicating whether the font has been modified. This is (should
+    be) maintained automatically, but you may set it if you wish.
+
+font.cidcopyright
+
+    Copyright message of the cid-keyed font as a whole (ie. not the
+    current subfont).
+
+font.cidfamilyname
+
+    Family name of the cid-keyed font as a whole (ie. not the current
+    subfont).
+
+font.cidfontname
+
+    Font name of the cid-keyed font as a whole (ie. not the current
+    subfont).
+
+font.cidfullname
+
+    Full name of the cid-keyed font as a whole (ie. not the current
+    subfont).
+
+font.cidordering
+
+font.cidregistry
+
+font.cidsubfont
+
+    Returns the number index of the current subfont in the cid-keyed
+    font (or -1 if this is not a cid-keyed font).
+
+    May be set to an index (an integer) or a subfont fontname (a
+    string) to change the current subfont. (To find the name of the
+    current subfont, simply use .fontname).
+
+font.cidsubfontcnt
+
+    Returns the number of subfonts in this cid-keyed font (or 0 if it
+    is not a cid-keyed font)
+
+font.cidsubfontnames
+
+    Returns a tuple of the subfont names in this cid-keyed font (or
+    None if it is not a cid-keyed font)
+
+font.cidsupplement
+
+font.cidversion
+
+font.cidweight
+
+    Weight of the cid-keyed font as a whole
+
+font.comment
+
+    A comment associated with the font. Can be anything.
+
+font.copyright
+
+    PostScript copyright notice
+
+font.cvt
+
+    Returns a sequence object containing the font’s cvt table. Changes
+    made to this object will be made to the font (this is a reference
+    not a copy).
+
+    The object has one additional method cvt.find(value[,low,high])
+    which finds the index of value in the cvt table (or -1 if not
+    found). If low and high are specified then the index will be
+    between [low,high).
+
+font.default_base_filename
+
+    The default base for the filename when generating a font
+
+font.descent
+
+    The font’s descent
+
+font.design_size
+
+    Size (in pica points) for which this font was designed.
+
+font.em
+
+    The em size of the font. Setting this will scale the entire font
+    to the new size.
+
+font.encoding
+
+    The name of the current encoding. Setting it will change the
+    encoding used for indexing. To compact the encoding, first set it
+    to your desired encoding (e.g. UnicodeBMP), then set it to
+    compacted.
+
+font.familyname
+
+    PostScript font family name
+
+font.fondname
+
+    Mac fond name
+
+font.fontlog
+
+    A comment associated with the font. Can be anything.
+
+font.fontname
+
+    PostScript font name
+
+    Note that in a CID keyed font this will be the name of the current
+    subfont. Use cidfontname for the name of the font as a whole.
+
+font.fullname
+
+    PostScript font name
+
+font.gasp
+
+    Returns a tuple of all gasp table entries. Each item in the tuple
+    is itself a tuple composed of a ppem (an integer) and a tuple of
+    flags. The flags are chosen from:
+
+    gridfit
+
+    antialias
+
+    symmetric-smoothing
+
+    gridfit+smoothing
+
+font.gasp_version
+
+    The version of the ‘gasp’ table. Currently this may be 0 or 1.
+
+font.gpos_lookups
+
+    Returns a tuple of all positioning lookup names in the font. This
+    member cannot be set.
+
+font.gsub_lookups
+
+    Returns a tuple of all substitution lookup names in the font. This
+    member cannot be set.
+
+font.guide
+
+    A copy of the font’s guide layer
+
+font.hasvmetrics
+
+font.head_optimized_for_cleartype
+
+font.hhea_ascent
+
+font.hhea_ascent_add
+
+font.hhea_descent
+
+font.hhea_descent_add
+
+font.hhea_linegap
+
+font.horizontalBaseline
+
+    Returns a tuple of tuples containing the horizontal baseline
+    information in the font (the ‘BASE’ table). If there is no
+    information None will be returned, otherwise the format of the
+    tuple is:
+
+    ((tuple of baseline tags used), (tuple of script information))
+
+    The (tuple of baseline tags used) is simply a tuple of 4 letter
+    strings as ("hang", "ideo", "romn") these are standard baseline
+    tag names as defined in the opentype spec. The number of entries
+    here, and their order is important as there will be subsequent
+    tuples (in the script tuple) which use the same ordering.
+
+    The (tuple of script information) is again a tuple of script
+    information tuples.
+
+    A script information tuple looks like
+
+    (script-tag,default-baseline-tag, (tuple of baseline positions),
+    (tuple of language extents))
+
+    If there are no baseline tags defined (an empty tuple), then the
+    default-baseline-tag and the (tuple of baseline positions) will be
+    None. Otherwise both tags will be 4 character strings, and the
+    (tuple of baseline positions) will be a tuple of numbers (in the
+    same order as the (tuple of baseline tags used) above) specifying
+    the relative positions of each baseline for this script.
+
+    A (tuple of language extents) is a tuple of language extent
+    tuples.
+
+    A language extent tuple is
+
+    (language-tag,min-extent,max-extent, (tuple of feature extents))
+
+    language-tag is a 4 letter string specifying an opentype language,
+    min/max-extent are numbers specifying how far above and below the
+    baseline characters go in this script/language.
+
+    A (tuple of feature extents> is a tuple of feature extent tuples.
+
+    A feature extent tuple is
+
+    (feature-tag,min-extent,max-extent)
+
+    feature-tag is a 4 letter string specifying an opentype (GPOS or
+    GSUB) feature tag, min/max-extent are numbers specifying how far
+    above and below the baseline characters go in this script/language
+    with the feature applied.
+
+    Example:
+
+    (("hang","ideo","romn"),
+
+      (("cyrl","romn",(1405,-288,0),()),
+
+       ("grek","romn",(1405,-288,0),()),
+
+       ("latn","romn",(1405,-288,0),
+
+         (("dflt",-576,1913,
+
+           (("NoAc",-576,1482),
+
+            ("ENG ",-576,1482))
+
+         ),
+
+       )
+
+      )
+
+     )
+
+    )
+
+    (Note: The comma after the dflt tuple puts it into a one-element
+    tuple.)
+
+font.is_cid
+
+    Indicates whether the font is a cid-keyed font or not. (Read-only)
+
+font.is_quadratic
+
+    Deprecated. Whether the contours should be interpretted as a set
+    of quadratic or cubic splines. Setting this value has the side
+    effect of converting the entire font into the other format
+
+    Now each layer may have its own setting for this value, which
+    should be set on the font’s font.layers.
+
+font.isnew
+
+    A flag indicating that this is a new font
+
+font.italicangle
+
+font.macstyle
+
+    Bit 0
+
+    Bold (if set to 1)
+
+    Bit 1
+
+    Italic (if set to 1)
+
+    Bit 2
+
+    Underline (if set to 1)
+
+    Bit 3
+
+    Outline (if set to 1)
+
+    Bit 4
+
+    Shadow (if set to 1)
+
+    Bit 5
+
+    Condensed (if set to 1)
+
+    Bit 6
+
+    Extended (if set to 1)
+
+    Bits 7-15
+
+    Reserved (set to 0).
+
+    (source)
+
+font.layer_cnt
+
+    The number of layers in the font. (Read only. Can change using add
+    and del operations on the font.layers array)
+
+font.layers
+
+    Returns a dictionary like object with information on the layers of
+    the font – a name and a boolean indicating whether the layer is
+    quadratic or not.
+
+    You may remove a layer with
+
+    del font.layers["unneeded layer"]
+
+    You may add a new layer with
+
+font.layers.add("layer-name",is_quadratic[, is_background])
+
+    You may change a layer’s name with
+
+font.layers["layer"].name = "new-name"
+
+    You may change the type of splines in a layer with
+
+font.layers["layer"].is_quadratic = True
+
+    You may change whether it is a background layer by
+
+font.layers["layer"].is_background = True
+
+    Note: The layers that live in the font are different from layers
+    that live in a glyph. These objects do not have the Layer type
+    documented earlier.
+
+font.loadState
+
+    A bitmask indicating non-fatal errors found when loading the
+    font. (readonly)
+
+    0x01
+
+    Bad PostScript entry in ‘name’ table
+
+    0x02
+
+    Bad ‘glyf’ or ‘loca’ table
+
+    0x04
+
+    Bad ‘CFF ‘ table
+
+    0x08
+
+    Bad ‘hhea’, ‘hmtx’, ‘vhea’ or ‘vmtx’ table
+
+    0x10
+
+    Bad ‘cmap’ table
+
+    0x20
+
+    Bad ‘EBLC’, ‘bloc’, ‘EBDT’ or ‘bdat’ (embedded bitmap) table
+
+    0x40
+
+    Bad Apple GX advanced typography table
+
+    0x80
+
+    Bad OpenType advanced typography table (GPOS, GSUB, GDEF, BASE)
+
+    0x100
+
+    Bad OS/2 version number
+
+    Windows will reject all fonts with a OS/2 version number of 0 and
+    will reject OT-CFF fonts with a version number of 1
+
+font.maxp_FDEFs
+
+    The number of function definitions used by the tt program
+
+font.maxp_IDEFs
+
+    The number of instruction definitions used by the tt program
+
+font.maxp_maxStackDepth
+
+    The maximum stack depth used by the tt program
+
+font.maxp_storageCnt
+
+    The number of storage locations used by the tt program
+
+font.maxp_twilightPtCnt
+
+    The number of points in the twilight zone of the tt program
+
+font.maxp_zones
+
+    The number of zones used in the tt program
+
+font.multilayer
+
+font.onlybitmaps
+
+    A flag indicating that this font only contains bitmaps. No
+    outlines.
+
+font.os2_codepages
+
+    A 2 element tuple containing the OS/2 Codepages field
+
+font.os2_family_class
+
+font.os2_fstype
+
+font.os2_panose
+
+font.os2_strikeypos
+
+font.os2_strikeysize
+
+font.os2_subxoff
+
+font.os2_subxsize
+
+font.os2_subyoff
+
+font.os2_subysize
+
+font.os2_supxoff
+
+font.os2_supxsize
+
+font.os2_supyoff
+
+font.os2_supysize
+
+font.os2_typoascent
+
+font.os2_typoascent_add
+
+font.os2_typodescent
+
+font.os2_typodescent_add
+
+font.os2_typolinegap
+
+font.os2_use_typo_metrics
+
+font.os2_unicoderanges
+
+    A 4 element tuple containing the OS/2 Unicode Ranges field
+
+font.os2_vendor
+
+font.os2_version
+
+font.os2_weight
+
+font.os2_weight_width_slope_only
+
+font.os2_width
+
+font.os2_winascent
+
+font.os2_winascent_add
+
+font.os2_windescent
+
+font.os2_windescent_add
+
+font.path
+
+    (readonly) Returns a string containing the name of the file from
+    which the font was originally read (in this session), or if this
+    is a new font, returns a made up filename in the current directory
+    named something like “Untitled1.sfd”. See also font.sfd_path.
+
+font.persistent
+
+    Whatever you want – though I recommend you store a dict here
+    (these data will be saved as a pickled object in the sfd file. It
+    is your job to ensure that whatever you put here can be pickled)
+
+    If you do store a dict then the following entries will be treated
+    specially:
+
+    initScriptString
+
+    If present, and if this is a string, then each time the font is
+    loaded from an sfd file, this string will be passed to the python
+    interpreter.
+
+    Note
+
+    This is a string, not a function. Function code cannot be
+    pickled. Since it is a string it will receive no arguments, but
+    the current font will be available in the activeFont method of the
+    fontforge module.
+
+    This string will be interpreted before the loadFontHook of the
+    fontforge.hooks dictionary.
+
+    One possible behavior for this string is to define function hooks
+    to be stored in the temporary dict described below.
+
+font.math
+
+    Returns a math object which provides information on the font’s
+    underlying math constant table. There is only one of these per
+    font.
+
+font.private
+
+    Returns a private dictionary-like object representing the
+    PostScript private dictionary for the font. Changing entries in
+    this object will change them in the font. (It’s a reference, not a
+    copy).
+
+    There is an iterator associated with this entry.
+
+font.privateState
+
+    Checks the (PostScript) Private dictionary and returns a bitmask
+    of some common errors.
+
+    0x000001
+
+    Odd number of elements in either the BlueValues or OtherBlues
+    array.
+
+    0x000002
+
+    Elements in either the BlueValues or OtherBlues are disordered.
+
+    0x000004
+
+    Too many elements in either the BlueValues or OtherBlues array.
+
+    0x000008
+
+    Elements in either the BlueValues or OtherBlues array are too
+    close (must be at least 2*BlueFuzz +1 apart).
+
+    0x000010
+
+    Elements in either the BlueValues or OtherBlues array are not
+    integers.
+
+    0x000020
+
+    Alignment zone height in either the BlueValues or OtherBlues array
+    is too big for the value of BlueScale.
+
+    0x000100
+
+    Odd number of elements in either the FamilyBlues or
+    FamilyOtherBlues array.
+
+    0x000200
+
+    Elements in either the FamilyBlues or FamilyOtherBlues are
+    disordered.
+
+    0x000400
+
+    Too many elements in either the FamilyBlues or FamilyOtherBlues
+    array.
+
+    0x000800
+
+    Elements in either the FamilyBlues or FamilyOtherBlues array are
+    too close (must be at least 2*BlueFuzz +1 apart).
+
+    0x001000
+
+    Elements in either the FamilyBlues or FamilyOtherBlues array are
+    not integers.
+
+    0x002000
+
+    Alignment zone height in either the FamilyBlues or
+    FamilyOtherBlues array is too big for the value of BlueScale.
+
+    0x010000
+
+    Missing BlueValues entry.
+
+    0x020000
+
+    Bad BlueFuzz entry.
+
+    0x040000
+
+    Bad BlueScale entry.
+
+    0x080000
+
+    Bad StdHW entry.
+
+    0x100000
+
+    Bad StdVW entry.
+
+    0x200000
+
+    Bad StemSnapH entry.
+
+    0x400000
+
+    Bad StemSnapV entry.
+
+    0x800000
+
+    StemSnapH does not include StdHW.
+
+    0x1000000
+
+    StemSnapV does not include StdVW.
+
+    0x2000000
+
+    Bad BlueShift entry.
+
+font.selection
+
+    Returns a reference to a array-like object representing the font's
+    selection. There is one entry for each encoding slot (there may
+    not be a glyph attached to every encoding slot). You may set this
+    with a tuple of integers (or boolean values). There should not be
+    more entries in the tuple than there are encoding slots in the
+    current encoding. A True or non-0 value means the slot is
+    selected.
+
+font.sfd_path
+
+    (readonly) Returns a string (or None) containing the name of the
+    sfd file associated with this font. Sometimes this will be the
+    same as font.path.
+
+font.sfnt_names
+
+    The strings in the sfnt ‘name’ table. A tuple of all MS
+    names. Each name is itself a tuple of strings
+    (language,strid,string). Language may be either the (english) name
+    of the language/locale, or the number representing that language
+    in Microsoft’s specification. Strid may be one of the (English)
+    string names (Copyright, Family, SubFamily, etc.) or the numeric
+    value of that item. The string itself is in UTF-8.
+
+    Mac names will be automagically created from MS names
+
+font.sfntRevision
+
+    The font revision field stored in the 'head' table of an
+    sfnt. This is documented to be a fixed 16.16 number (that is a 32
+    bit number with the binary point between bits 15 and 16).
+
+    The field may be unset (in which case when the font is generated,
+    FontForge will guess a default value from one of the version
+    strings).
+
+    The value returned with be None if the field is unset or a double.
+
+    You may set it to None which “unsets” it, or to a double value, or
+    to an integer. The integer will be treated as a 32 bit integer and
+    right shifted by 16 to get a 16.16 value).
+
+font.size_feature
+
+    The OpenType ‘size’ feature has two formats. It may either
+    represent the design size of the font (and nothing else) or the
+    design size, and range (top and bottom point sizes for which this
+    design works), a style id (used to represent this design size
+    throughout the font family) and a set of language/string pairs
+    used to represent this design size in the menu.
+
+    If no size information is specified in the font FontForge will
+    return None.
+
+    If only the design size is specified, FontForge will return a
+    tuple containing a single element: the point size for which the
+    font was designed. (This is returned as a real number – the field
+    can represent tenths of a point).
+
+    Otherwise FontForge returns a tuple containing five elements, the
+    design size, the bottom of the design range, the top, the style id
+    and a tuple of tuples. Each sub-tuple is a language/string
+    pair. Language may be either the (english) name of the
+    language/locale, or The string itself is in UTF-8.
+
+font.strokedfont
+
+    is this a stroked font?
+
+font.strokewidth
+
+    the stroke width of a stroked font
+
+font.temporary
+
+    Whatever you want – though I recommend you store a dict here
+    (these data will be lost once the font is closed)
+
+    If you do store a dict then the following entries will be treated
+    specially:
+
+    generateFontPreHook
+
+    If present, and if this is a function it will be called just
+    before a font is generated. It will be called with the font and
+    the filename to which the font will be written.
+
+    generateFontPostHook
+
+    If present, and if this is a function it will be called just after
+    a font is generated. It will be called with the font and the
+    filename to which the font will be written.
+
+font.texparameters
+
+    Returns a tuple of TeX font parameters. TeX font type followed by
+    22 parameters. Font type is one of:
+
+    text
+
+    mathsym
+
+    mathext
+
+    unset
+
+    In case of unset default values for font parameters will be
+    returned.
+
+font.uniqueid
+
+font.upos
+
+    underline position
+
+font.userdata
+
+    Warning
+
+    Deprecated name for font.temporary
+
+font.uwidth
+
+    underline width
+
+font.version
+
+    PostScript font version string
+
+font.verticalBaseline
+
+    Same format as font.horizontalBaseline.
+
+font.vertical_origin
+
+    Warning
+
+    Deprecated
+
+font.vhea_linegap
+
+font.weight
+
+    PostScript font weight string
+
+font.woffMajor
+
+    The major version number of a woff file, an integer.
+
+    The field may be unset (in which case when the font is generated,
+    FontForge will guess a default value from one of the version
+    strings).
+
+    The value returned with be None if the field is unset or an
+    integer.
+
+    You may set it to None which “unsets” it, or to an integer.
+
+font.woffMinor
+
+    The minor version number of a woff file, an integer.
+
+    The field may be unset (in which case when the font is generated,
+    FontForge will guess a default value from one of the version
+    strings).
+
+    The value returned with be None if the field is unset or an
+    integer.
+
+    You may set it to None which “unsets” it, or to an integer.
+
+font.woffMetadata
+
+    Any metadata associated with a woff file. This is a utf8 string
+    containing unparsed xml.
+
+font.xHeight
+
+    (readonly) Computes the X Height (the height of lower case letters
+    such as “x”). A negative number indicates the value could not be
+    computed (the font might have no lower case letters because it was
+    upper case only, or didn’t include glyphs for a script with lower
+    case letters).
