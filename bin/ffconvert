@@ -10,39 +10,11 @@ import string
 class FontForgeConvert:
     def __init__(self, args):
         self.args = args
-
     def run(self):
         self.read()
-        if self.args.verbose:
-            self.print()
-        self.change()
         self.write()
-
     def read(self):
         self.font = fontforge.open(self.args.source_filename)
-
-    def change(self):
-        changed = False
-        if self.args.full_name:
-            self.font.fullname = self.args.full_name
-            changed = True
-        if self.args.font_name:
-            self.font.fontname = self.args.font_name
-            changed = True
-        if self.args.family_name:
-            self.font.familyname = self.args.family_name
-            changed = True
-        if self.args.weight:
-            self.font.weight = self.args.weight
-            changed = True
-        if self.args.italic_angle:
-            self.font.italicangle = self.args.italic_angle
-            changed = True
-        if self.args.dest_filename != None and len(self.args.dest_filename) > 0:
-            if self.args.verbose and changed:
-                print("AFTER:")
-                self.print()
-
     def write(self):
         if self.args.dest_filename != None:
             for filename in self.args.dest_filename:
@@ -53,25 +25,12 @@ class FontForgeConvert:
                     print("Generating %s ..." % filename)
                     self.font.generate(filename)
 
-    def print(self):
-        print("font name   = %s" % self.font.fontname)
-        print("full name   = %s" % self.font.fullname)
-        print("family name = %s" % self.font.familyname)
-        print("weight      = %s" % self.font.weight)
-        print("italicangle = %s" % self.font.italicangle)
-
 parser = argparse.ArgumentParser(
     description = "convert between font formats"
 )
 
 parser.add_argument('source_filename')
 parser.add_argument('dest_filename', nargs = '*', default = [])
-parser.add_argument('--full-name')
-parser.add_argument('--font-name')
-parser.add_argument('--family-name')
-parser.add_argument('--weight')
-parser.add_argument('--italic-angle', type = float)
-parser.add_argument('-v', '--verbose', action = 'store_true')
 
 args = parser.parse_args()
 ffc = FontForgeConvert(args)
