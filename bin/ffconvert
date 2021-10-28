@@ -18,12 +18,17 @@ class FontForgeConvert:
     def write(self):
         if self.args.dest_filename != None:
             for filename in self.args.dest_filename:
-                if re.search(r'\.sfd$', filename):
-                    print("Saving SFD %s ..." % filename)
-                    self.font.save(filename)
+                destFilename = filename
+
+                if re.search(r'^\.[A-Za-z0-9]+$', filename):
+                    destFilename = re.sub(r'\.[A-Za-z0-9]+$', '', self.args.source_filename) + filename
+
+                if re.search(r'\.sfd$', destFilename):
+                    print("Saving SFD %s ..." % destFilename)
+                    self.font.save(destFilename)
                 else:
-                    print("Generating %s ..." % filename)
-                    self.font.generate(filename)
+                    print("Generating %s ..." % destFilename)
+                    self.font.generate(destFilename)
 
 parser = argparse.ArgumentParser(
     description = "convert between font formats"
