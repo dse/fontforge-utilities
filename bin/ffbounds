@@ -1,0 +1,37 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import json
+import argparse
+
+parser = argparse.ArgumentParser(description = "print specified fonts' glyphs' metrics")
+parser.add_argument('filenames', nargs = '+')
+parser.add_argument('-j', '--json', action = 'store_true')
+args = parser.parse_args()
+
+for filename in args.filenames:
+    font = fontforge.open(filename)
+    glyphs = []
+    high = float("-inf")
+    low = float("inf")
+    for glyph in font.glyphs():
+        hex = "U+%04X" % glyph.encoding
+        (x1, y1, x2, y2) = glyph.boundingBox()
+        errors = []
+        below = y1 < -font.descent
+        above = y2 > font.ascent
+        if y1 < low:
+            low = y1
+        if y2 > high:
+            high = y2
+        if below:
+            errors.append('bounding box bottom (%8.2f) extends below descent (%5d)' % (y1, -font.descent))
+        if above:
+            errors.append('bounding box top    (%8.2f) extends above ascent (%5d)' % (y2, font.ascent))
+        if len(errors):
+            for error in errors:
+                print("%s: %-8s: %s" % (filename, hex, error))
+    print('%s: lowest descent is %s' % (filename, low))
+    print('%s: highest ascent is %s' % (filename, high))
