@@ -3,12 +3,10 @@
 
 import fontforge
 import sys
-import json
 import argparse
 
 parser = argparse.ArgumentParser(description = "print specified fonts' glyphs' metrics")
 parser.add_argument('filenames', nargs = '+')
-parser.add_argument('-j', '--json', action = 'store_true')
 args = parser.parse_args()
 
 for filename in args.filenames:
