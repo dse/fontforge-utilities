@@ -50,9 +50,9 @@ for filename in sys.argv[1:]:
             print("# glyph widths vary, with no particular width having a majority")
 
     if fontResult:
-        print("# font should be detected as monospace")
+        print("# all glyph widths are the same; font should be detected as monospace")
     else:
-        print("# font will likely not be detected as monospace")
+        print("# some glyph widths are not the same; font will likely not be detected as monospace")
 
 if not result:
     exit(1)
