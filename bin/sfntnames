@@ -1,0 +1,11 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    print("%s:" % filename)
+    for tuple in font.sfnt_names:
+        print("    %-20s  %-20s  %s" % tuple)

@@ -1,0 +1,9 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    print("%-38s  %s" % (filename, font.italicangle))
