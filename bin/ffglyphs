@@ -1,4 +1,4 @@
-#!/usr/bin/env fontforge -quiet
+#!/usr/bin/env fontforge
 # -*- mode: python; coding: utf-8 -*-
 
 import fontforge
