@@ -6,6 +6,7 @@ import argparse
 import os
 import re
 import string
+import sys
 
 class FontForgeScript:
     def __init__(self, args):
@@ -88,11 +89,23 @@ class FontForgeScript:
         self.lineHeight       = args.line_height
     def setNames(self):
         if self.fontName != None:
-            self.font.fontname = self.fontName
+            if "%s" in self.fontName:
+                self.font.fontname = self.fontName % self.font.fontname
+            else:
+                self.font.fontname = self.fontName
+            print(self.font.fontname)
         if self.familyName != None:
-            self.font.familyname = self.familyName
+            if "%s" in self.familyName:
+                self.font.familyname = self.familyName % self.font.familyname
+            else:
+                self.font.familyname = self.familyName
+            print(self.font.familyname)
         if self.fullName != None:
-            self.font.fullname = self.fullName
+            if "%s" in self.fullName:
+                self.font.fullname = self.fullName % self.font.fullname
+            else:
+                self.font.fullname = self.fullName
+            print(self.font.fullname)
         if self.version != None:
             self.font.version = self.version
         if self.sfntRevision != None:
