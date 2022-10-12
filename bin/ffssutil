@@ -1,0 +1,52 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import argparse
+import re
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(description='swap alternate glyphs')
+    parser.add_argument('infile')
+    parser.add_argument('outfile')
+    parser.add_argument('operation')
+    parser.add_argument('args', nargs='*')
+    args = parser.parse_args()
+    if args.operation == 'swap-glyphs':
+        font = fontforge.open(args.infile)
+        swapGlyphs(font, args.args[0], args.args[1])
+        if re.search('\.[Ss][Ff][Dd]$', args.outfile):
+            font.save(args.outfile)
+        else:
+            font.generate(args.outfile)
+    else:
+        sys.stderr.write("invalid command: %s\n" % args.operation)
+        exit(1)
+
+def convertCharArg(a):
+    # something like 'U+1F4A9' or 'zero'?
+    match = re.search('^(?:[Uu][+]|0[Xx])([0-9A-Fa-f]+)$', a)
+    if match:
+        return int(match[1], base=16)
+    # a simple non-negative integer?
+    match = re.search('^[0-9]+$', a)
+    if match:
+        return int(match[0])
+    # assume it's a glyph name
+    return a
+
+def swapGlyphs(font, a, b):
+    a = convertCharArg(a)
+    b = convertCharArg(b)
+    glyphA = font[a]
+    glyphB = font[b]
+    for layerName in font.layers:
+        [glyphA.layers[layerName],
+         glyphB.layers[layerName]] = [glyphB.layers[layerName],
+                                      glyphA.layers[layerName]]
+    [glyphA.references,
+     glyphB.references] = [glyphB.references,
+                           glyphA.references]
+
+main()
