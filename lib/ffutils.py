@@ -126,6 +126,19 @@ def clipGlyph(glyph, width = None):
     glyph.layers['Fore'] += clipContour
     glyph.intersect()
 
+def clipGlyphTopBottom(glyph, width = None):
+    if width == None:
+        width = glyph.width
+    font = glyph.font
+    clipContour = fontforge.contour()
+    clipContour.moveTo(-width, font.ascent)
+    clipContour.lineTo(width * 2, font.ascent)
+    clipContour.lineTo(width * 2, -font.descent)
+    clipContour.lineTo(-width, -font.descent)
+    clipContour.closed = True
+    glyph.layers['Fore'] += clipContour
+    glyph.intersect()
+
 def generateBraille(font, codepoint):
     glyphWidth = 1024
     glyphHeight = font.ascent + font.descent
@@ -188,88 +201,94 @@ def updateBackgroundStrokeGlyph(glyph):
     font = glyph.font
     bg = glyph.background
     fg = glyph.foreground
-    clip = False
+    clip = True
+    hex = "U+%04X" % glyph.unicode
 
-    if not bg.isEmpty():
-        savedWidth = glyph.width
+    if bg.isEmpty():
+        print("%s - background layer is empty" % hex)
+        pass
 
-        # make heavy box drawing character segments heavier
-        middleX = int(0.5 + 1.0 * glyph.width / 2)
-        middleY = int(0.5 + 1.0 * (font.ascent - abs(font.descent)) / 2)
-        backLayer = glyph.layers['Back']
+    print("%s - updating stroke" % hex)
 
-        # legacy
-        if (glyph.unicode >= 0x2500 and glyph.unicode <= 0x254f) or (glyph.unicode >= 0x2574 and glyph.unicode <= 0x257f):
-            modifyBackLayer = False
-            contours = []
-            newContours = []
-            for contour in backLayer:
-                contours += [contour]
-                newContour = fontforge.contour()
-                for point in contour:
-                    if point.x == middleX - 48:
-                        modifyBackLayer = True
-                        point.x = middleX - 96
-                    if point.x == middleX + 48:
-                        modifyBackLayer = True
-                        point.x = middleX + 96
-                    if point.y == middleY - 48:
-                        modifyBackLayer = True
-                        point.y = middleY - 96
-                    if point.y == middleY + 48:
-                        modifyBackLayer = True
-                        point.y = middleY + 96
-                    newContour += point
-                newContours += [newContour]
-            if modifyBackLayer:
-                glyph.layers['Back'] = fontforge.layer()
-                for contour in newContours:
-                    glyph.layers['Back'] += contour
-                backLayer = glyph.layers['Back']
+    savedWidth = glyph.width
 
-        # save anchor points
-        glyph.activeLayer = 'Fore'
-        anchorPoints = glyph.anchorPoints
+    backLayer = glyph.layers['Back']
 
-        # save foreground references, for glyphs combining
-        # foreground-layer references and background-layer strokes
-        references = glyph.layerrefs[1]
+    # make heavy box drawing character segments heavier
+    middleX = int(0.5 + 1.0 * glyph.width / 2)
+    middleY = int(0.5 + 1.0 * (font.ascent - abs(font.descent)) / 2)
+    if (font.fontname == 'DSETypewriter' and
+        ((glyph.unicode >= 0x2500 and glyph.unicode <= 0x256f) or
+         (glyph.unicode >= 0x2574 and glyph.unicode <= 0x257f))):
+        modifyBackLayer = False
+        contours = []
+        newContours = []
+        for contour in backLayer:
+            contours += [contour]
+            newContour = fontforge.contour()
+            for point in contour:
+                if point.x == middleX - 48:
+                    modifyBackLayer = True
+                    point.x = middleX - 96
+                if point.x == middleX + 48:
+                    modifyBackLayer = True
+                    point.x = middleX + 96
+                if point.y == middleY - 48:
+                    modifyBackLayer = True
+                    point.y = middleY - 96
+                if point.y == middleY + 48:
+                    modifyBackLayer = True
+                    point.y = middleY + 96
+                newContour += point
+            newContours += [newContour]
+        if modifyBackLayer:
+            glyph.layers['Back'] = fontforge.layer()
+            for contour in newContours:
+                glyph.layers['Back'] += contour
+            backLayer = glyph.layers['Back']
 
-        copyLayer(glyph, src = 'Back', dest = 'Fore')
+    # save anchor points
+    glyph.activeLayer = 'Fore'
+    anchorPoints = glyph.anchorPoints
 
-        strokeWidth = 96
+    # save foreground references, for glyphs combining
+    # foreground-layer references and background-layer strokes
+    references = glyph.layerrefs[1]
 
-        if (isBoxDrawingCharacter(glyph) and not
-            isDiagonalBoxDrawingCharacter(glyph)):
-            # Box Drawing Characters
-            lineCap = 'butt'
-            lineJoin = 'round'
-        else:
-            lineCap = 'round'
-            lineJoin = 'round'
+    copyLayer(glyph, src = 'Back', dest = 'Fore')
 
-        glyph.activeLayer = 'Fore'
-        if font.fontname == 'DSETypewriter' and glyph.unicode in [0x3b1, 0x3b4]:
-            print('wheeee')
-            glyph.stroke('circular', strokeWidth, lineCap, lineJoin)
-        else:
-            glyph.stroke('circular', strokeWidth, lineCap, lineJoin)
-            glyph.removeOverlap()
-        glyph.width = savedWidth
+    strokeWidth = 96
 
-        # originally for U+2571 through U+2573 but would not work
-        if clip:
-            clipGlyph(glyph)
+    if (isBoxDrawingCharacter(glyph) and not
+        isDiagonalBoxDrawingCharacter(glyph)):
+        # Box Drawing Characters
+        lineCap = 'butt'
+        lineJoin = 'round'
+    else:
+        lineCap = 'round'
+        lineJoin = 'round'
 
-        glyph.addExtrema()
+    glyph.activeLayer = 'Fore'
+    if font.fontname == 'DSETypewriter' and glyph.unicode in [0x3b1, 0x3b4]:
+        print('wheeee')
+        glyph.stroke('circular', strokeWidth, lineCap, lineJoin)
+    else:
+        glyph.stroke('circular', strokeWidth, lineCap, lineJoin)
+        glyph.removeOverlap()
+    glyph.width = savedWidth
 
-        # restore anchor points
-        glyph.activeLayer = 'Fore'
-        for anchorPoint in anchorPoints:
-            glyph.addAnchorPoint(*anchorPoint)
+    if clip:
+        clipGlyphTopBottom(glyph)
 
-        for reference in references:
-            glyph.addReference(reference[0], reference[1])
+    glyph.addExtrema()
+
+    # restore anchor points
+    glyph.activeLayer = 'Fore'
+    for anchorPoint in anchorPoints:
+        glyph.addAnchorPoint(*anchorPoint)
+
+    for reference in references:
+        glyph.addReference(reference[0], reference[1])
 
 # https://stackoverflow.com/questions/243831/unicode-block-of-a-character-in-python
 class UnicodeBlocks:
