@@ -6,6 +6,13 @@ import argparse
 import os
 import re
 import string
+import sys
+
+hexPrefixRegex = r'(?:[Uu]\+?|0?[Xx])'
+hexDigitsRegex = r'[0-9A-Fa-f]+'
+fromRegex = '%s(?P<from>%s)' % (hexPrefixRegex, hexDigitsRegex)
+toRegex   = '%s(?P<to>%s)' % (hexPrefixRegex, hexDigitsRegex)
+hexRangeRegex = r'^%s(?:-%s)?$' % (fromRegex, toRegex)
 
 class FontForgeScript:
     def __init__(self, args):
@@ -52,6 +59,9 @@ class FontForgeScript:
         self.setMetrics()
         self.updateGuides()
         self.setNames()
+
+        if self.args.no_hints_on != None:
+            self.noHintsOn()
     def load(self):
         if self.sourceFilename == 'NEW':
             self.font = fontforge.font()
@@ -88,11 +98,23 @@ class FontForgeScript:
         self.lineHeight       = args.line_height
     def setNames(self):
         if self.fontName != None:
-            self.font.fontname = self.fontName
+            if "%s" in self.fontName:
+                self.font.fontname = self.fontName % self.font.fontname
+            else:
+                self.font.fontname = self.fontName
+            print(self.font.fontname)
         if self.familyName != None:
-            self.font.familyname = self.familyName
+            if "%s" in self.familyName:
+                self.font.familyname = self.familyName % self.font.familyname
+            else:
+                self.font.familyname = self.familyName
+            print(self.font.familyname)
         if self.fullName != None:
-            self.font.fullname = self.fullName
+            if "%s" in self.fullName:
+                self.font.fullname = self.fullName % self.font.fullname
+            else:
+                self.font.fullname = self.fullName
+            print(self.font.fullname)
         if self.version != None:
             self.font.version = self.version
         if self.sfntRevision != None:
@@ -212,11 +234,37 @@ class FontForgeScript:
                 name = match.group(2)
                 result += [{ coordinateName: y, 'name': name }]
         return result
+    def noHintsOn(self):
+        for value in self.args.no_hints_on:
+            value = value.strip()
+            specs = re.split(r'\s+|\s*,\s*', value)
+            for spec in specs:
+                match = re.search(hexRangeRegex, spec)
+                if not match:
+                    raise Exception('invalid no-hints-on spec: %s' % spec)
+                lo = match.group('from')
+                hi = match.group('to')
+                if lo: lo = int(lo, 16)
+                if hi: hi = int(hi, 16)
+                if not hi: hi = lo
+                if lo > hi: [lo, hi] = [hi, lo]
+                for codepoint in range(lo, hi + 1):
+                    self.noHintsOnCodepoint(codepoint)
+    def noHintsOnCodepoint(self, codepoint):
+        if not codepoint in self.font:
+            print('no glyph at %d' % codepoint)
+            return
+        print("Removing hints on U+%04X" % codepoint)
+        glyph = self.font[codepoint]
+        glyph.dhints = ()
+        glyph.hhints = ()
+        glyph.vhints = ()
+        glyph.manualHints = True
 
 parser = argparse.ArgumentParser(
     description = 'Various font manipulation and conversion tasks'
 )
-parser.add_argument('source_filename',      help = 'Use \'NEW\' to start from a new font.')
+parser.add_argument('source_filename',      help = 'Use \'NEW\' to start from a new blank font.')
 parser.add_argument('dest_filename')
 parser.add_argument('--no-hints',           action = 'store_true')
 parser.add_argument('--omit-instructions',  action = 'store_true')
@@ -238,6 +286,14 @@ parser.add_argument('--clear-guides',       action = 'store_true')
 parser.add_argument('--horizontal-guides',  type = str,   help = 'specify horizontal guides')
 parser.add_argument('--vertical-guides',    type = str,   help = 'specify vertical guides')
 parser.add_argument('--grid-size',          type = int,   help = 'specify grid width/height (e.g., 16)')
+parser.add_argument('--no-hints-on',        action = 'append', type = str, help = 'remove hints for these glyphs (e.g., U+2500 or U+2500-U+25FF)');
+
+# glyph.dhints, a tuple
+# glyph.hhints, a tuple
+# glyph.manualHints, a "don't autohint" flag.
+# glyph.vhints, a tuple
+# glyph.addHint(...)
+# glyph.autoHint()
 
 # --grid=16|clear
 # --hguides=clear|<guides>|+<guides>
