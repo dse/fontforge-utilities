@@ -30,6 +30,7 @@ class FontForgeScript:
         self.sfntRevision     = None
         self.font             = None
         self.gridSize         = None
+        self.width            = None
         if args != None:
             self.setFromArgs(args)
     def run(self):
@@ -52,9 +53,10 @@ class FontForgeScript:
             self.font.upos = self.args.underline_position
         if self.args.underline_height != None:
             self.font.uwidth = self.args.underline_height
-
         if self.args.grid_size != None:
             self.gridSize = args.grid_size
+        if self.args.width != None:
+            self.width = args.width
 
         self.setMetrics()
         self.updateGuides()
@@ -62,6 +64,8 @@ class FontForgeScript:
 
         if self.args.no_hints_on != None:
             self.noHintsOn()
+        if self.width:
+            self.setWidth(self.width)
     def load(self):
         if self.sourceFilename == 'NEW':
             self.font = fontforge.font()
@@ -260,6 +264,11 @@ class FontForgeScript:
         glyph.hhints = ()
         glyph.vhints = ()
         glyph.manualHints = True
+    def setWidth(self, width):
+        if not self.width:
+            return
+        for glyph in self.font.glyphs():
+            glyph.width = self.width
 
 parser = argparse.ArgumentParser(
     description = 'Various font manipulation and conversion tasks'
@@ -286,7 +295,8 @@ parser.add_argument('--clear-guides',       action = 'store_true')
 parser.add_argument('--horizontal-guides',  type = str,   help = 'specify horizontal guides')
 parser.add_argument('--vertical-guides',    type = str,   help = 'specify vertical guides')
 parser.add_argument('--grid-size',          type = int,   help = 'specify grid width/height (e.g., 16)')
-parser.add_argument('--no-hints-on',        action = 'append', type = str, help = 'remove hints for these glyphs (e.g., U+2500 or U+2500-U+25FF)');
+parser.add_argument('--no-hints-on',        action = 'append', type = str, help = 'remove hints for these glyphs (e.g., U+2500 or U+2500-U+25FF)')
+parser.add_argument('--width',              type = int,   help = 'specify width for all glyphs')
 
 # glyph.dhints, a tuple
 # glyph.hhints, a tuple
