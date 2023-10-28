@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+import fontforge
+import getopt
+import sys
+
+# NOTES:
+# - SETWIDTH_NAME is an XLFD thing.
+# - ADD_STYLE_NAME is an XLFD thing.
+
+HELP_MESSAGE = '''
+usage:
+    ffchange [-f, --font-name=<name>] <filename> ...
+             [-m, --family-name=<name>]
+             [-w, --weight-name=<name>]
+             [-F, --full-name=<name>]
+             [--ascent=<int>]
+             [--copyright=<name>]
+             [--descent=<int>]
+             [--italic-angle=<deg>]
+             [--panose=0=9,1=5,...]
+    ffchange [<options> ...] <filename> -o|--outupt=<filename>
+    ffchange --help
+    ffchange --panose-help
+'''.strip()
+
+PANOSE_HELP_MESSAGE = '''
+--panose=<index>=<value>,...
+    For Latin text:
+        0 = serif style
+        1 = weight
+        2 = proportion
+        3 = contrast
+        4 = stroke variation
+        5 = arm style
+        6 = letterform
+        7 = midline
+        8 = x-height
+for details, See: see https://monotype.github.io/panose/pan1.htm
+'''.strip()
+
+help = False
+opts, args = getopt.gnu_getopt(sys.argv[1:],
+                               "hf:m:w:F:o:",
+                               [
+                                   "help",
+                                   "panose-help",
+                                   "--font-name=",
+                                   "--family-name=",
+                                   "--weight-name=",
+                                   "--full-name=",
+                                   "--ascent=",
+                                   "--copyright=",
+                                   "--descent=",
+                                   "--italic-angle=",
+                                   "--panose=",
+                                   "--output=",
+                                   "--output-filename=",
+                               ])
+
+fontName = None
+familyName = None
+weightName = None
+fullName = None
+ascent = None
+copyright = None
+descent = None
+italicAngle = None
+panoseString = None
+outputFilename = None
+
+for opt, arg in opts:
+    if opt in ('h', 'help'):
+        help = True
+    if opt == 'panose-help':
+        panoseHelp = True
+
+    elif opt in ('f', 'font-name'):
+        fontName = arg
+    elif opt in ('F', 'family-name'):
+        familyName = arg
+    elif opt in ('w', 'weight-name'):
+        weightName = arg
+    elif opt in ('F', 'full-name'):
+        fullName = arg
+    elif opt == 'ascent':
+        ascent = int(arg)
+    elif opt == 'copyright':
+        copyright = arg
+    elif opt == 'descent':
+        descent = int(arg)
+    elif opt == 'italic-angle':
+        italicAngle = int(arg)
+    elif opt == 'panose':
+        panoseString = arg
+    elif opt in ('o', 'output', 'output-filename'):
+        outputFilename = arg
+
+if help or panoseHelp:
+    if help:
+        print(HELP_MESSAGE)
+    if panoseHelp:
+        print(PANOSE_HELP_MESSAGE)
+    sys.exit()
+
+if len(args) < 1:
+    raise "not enough arguments - must specify at least one filename"
+
+if outputFilename is not None and len(args) != 1:
+    raise "too many arguments - must only supply one input filename if --output-filename is specified"
+
+for filename in args:
+    font = fontforge.open(filename)
+
+    if fontName is not None:
+        font.fontname = fontName
+    if familyName is not None:
+        font.familyname = familyName
+    if weightName is not None:
+        font.weight = weightName
+    if fullName is not None:
+        font.fullName = fullName
+    if ascent is not None:
+        font.ascent = ascent
+    if copyright is not None:
+        font.copyright = copyright
+    if descent is not None:
+        font.descent = descent
+    if italicAngle is not None:
+        font.italicangle = italicAngle
+    if panoseString is not None:
+        panoseChagnes = re.split(r'\s*(,\s*)+', panoseString)
+        for change in panoseChanges:
+            a = re.split(r'\s*=\s*', change.strip(), 2)
+            if (a.length < 2):
+                raise "invalid panose change: %s" % change
+            index = int(a[0])
+            value = int(a[1])
+            if index < 0 or index > 8:
+                raise "invalid panose index %d: %s" % (index, change)
+            before = "%s" % font.os2_panose
+            panose = list(font.os2_panose)
+            panose[index] = value
+            font.os2_panose = tuple(panose)
+            after = "%s" % font.os2_panose
+            print("panose: %s => %s" % (before, after))
+
+    if outputFilename is not None:
+        outputFilename = filename
+    if os.path.splitext(filename)[1] == '.sfd':
+        font.save(filename)
+    else:
+        font.generate(filename)
