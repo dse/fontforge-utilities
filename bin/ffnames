@@ -1,0 +1,14 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import re
+
+for filename in sys.argv[1:]:
+    print(filename)
+    font = fontforge.open(filename)
+    print("    fontname: %s" % font.fontname)
+    print("    familyname: %s" % font.familyname)
+    print("    fullname: %s" % font.fullname)
+    
