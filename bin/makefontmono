@@ -1,0 +1,49 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import os
+
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    glyphWidthCounts = {}
+    # if font.os2_panose[3] != 9:
+    #     sys.stderr.write("%s: invalid panose\n" % filename)
+    #     continue
+    glyphCount = 0
+    for glyph in font.glyphs():
+        print(glyph)
+        glyphCount += 1
+        width = glyph.width
+        if width in glyphWidthCounts:
+            glyphWidthCounts[width] += 1
+        else:
+            glyphWidthCounts[width] = 1
+    print(glyphWidthCounts)
+    print(len(glyphWidthCounts))
+    if len(glyphWidthCounts) < 1:
+        sys.stderr.write("%s: no glyphs?\n" % filename)
+        continue
+    majorityWidth = 0
+    for width in glyphWidthCounts:
+        print("width %4d => %5d codepoints\n" % (width, glyphWidthCounts[width]))
+    for width in glyphWidthCounts:
+        if glyphWidthCounts[width] * 2 > glyphCount:
+            majorityWidth = width
+            break
+    if not majorityWidth:
+        sys.stderr.write("%s: no majority width\n" % filename)
+        continue
+    for glyph in font.glyphs():
+        if glyph.width != majorityWidth:
+            glyph.width = majorityWidth
+    (base, ext) = os.path.splitext(filename)
+    if ext.lower() == '.sfd':
+        sys.stderr.write("%s: saving...\n" % filename)
+        font.save(filename)
+        sys.stderr.write("%s: saved\n" % filename)
+    else:
+        sys.stderr.write("%s: saving...\n" % filename)
+        font.generate(filename)
+        sys.stderr.write("%s: saved\n" % filename)
