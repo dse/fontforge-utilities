@@ -1,0 +1,12 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import os
+
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    print("%s" % font)
+    for glyph in font.glyphs():
+        print("U+%04X %s %d" % (glyph.unicode, glyph, glyph.width))

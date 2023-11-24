@@ -1,0 +1,93 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import argparse
+import fontforge
+import os
+
+parser = argparse.ArgumentParser(prog="set.py", description="font flag changer")
+parser.add_argument("filename", help="font filename")
+parser.add_argument("--weight")
+parser.add_argument("--family-name")
+parser.add_argument("--full-name")
+parser.add_argument("--font-name")
+parser.add_argument("--italic-angle", type=int)
+parser.add_argument("--mac-style", type=int)
+parser.add_argument("--os2-version", type=int)
+parser.add_argument("--os2-weight", type=int)
+parser.add_argument("--os2-panose0", type=int)
+parser.add_argument("--os2-panose1", type=int)
+parser.add_argument("--os2-panose2", type=int)
+parser.add_argument("--os2-panose3", type=int)
+parser.add_argument("--os2-panose4", type=int)
+parser.add_argument("--os2-panose5", type=int)
+parser.add_argument("--os2-panose6", type=int)
+parser.add_argument("--os2-panose7", type=int)
+parser.add_argument("--os2-panose8", type=int)
+parser.add_argument("--os2-panose9", type=int)
+parser.add_argument("--os2-fstype", type=int)
+parser.add_argument("--os2-family-class", type=int)
+
+args = parser.parse_args()
+font = fontforge.open(args.filename)
+if args.weight is not None:
+    font.weight = args.weight
+if args.family_name is not None:
+    font.familiyname = args.family_name
+if args.full_name is not None:
+    font.fullname = args.full_name
+if args.font_name is not None:
+    font.fontname = args.font_name
+if args.italic_angle is not None:
+    font.italicangle = args.italic_angle
+if args.mac_style is not None:
+    if args.mac_style == -1:    # removes
+        font.macstyle = -1
+    else:
+        font.macstyle = args.mac_style
+if args.os2_version is not None:
+    font.os2_version = args.os2_version
+if args.os2_weight is not None:
+    font.os2_weight = args.os2_weight
+if args.os2_fstype is not None:
+    font.os2_fstype = args.os2_fstype
+if args.os2_family_class is not None:
+    font.os2_family_class = args.os2_family_class
+
+if (args.os2_panose0 is not None or
+    args.os2_panose1 is not None or
+    args.os2_panose2 is not None or
+    args.os2_panose3 is not None or
+    args.os2_panose4 is not None or
+    args.os2_panose5 is not None or
+    args.os2_panose6 is not None or
+    args.os2_panose7 is not None or
+    args.os2_panose8 is not None or
+    args.os2_panose9 is not None):
+    panoseList = list(font.os2_panose)
+    if args.os2_panose0 is not None:
+        panoseList[0] = args.os2_panose0
+    if args.os2_panose1 is not None:
+        panoseList[1] = args.os2_panose1
+    if args.os2_panose2 is not None:
+        panoseList[2] = args.os2_panose2
+    if args.os2_panose3 is not None:
+        panoseList[3] = args.os2_panose3
+    if args.os2_panose4 is not None:
+        panoseList[4] = args.os2_panose4
+    if args.os2_panose5 is not None:
+        panoseList[5] = args.os2_panose5
+    if args.os2_panose6 is not None:
+        panoseList[6] = args.os2_panose6
+    if args.os2_panose7 is not None:
+        panoseList[7] = args.os2_panose7
+    if args.os2_panose8 is not None:
+        panoseList[8] = args.os2_panose8
+    if args.os2_panose9 is not None:
+        panoseList[9] = args.os2_panose9
+    font.os2_panose = tuple(panoseList)
+
+if os.path.splitext(args.filename)[1].lower() == '.sfd':
+    font.save(args.filename)
+else:
+    font.generate(args.filename)
