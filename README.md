@@ -10,7 +10,7 @@
 
 `ffnames` prints each font's FontName, FamilyName, and FullName.
 
-`sfntnames` prints each font's sfnt data.
+`ffsfnt` prints each font's sfnt data.
 
 `ffbounds`
 
