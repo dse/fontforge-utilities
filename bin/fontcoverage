@@ -1,12 +1,15 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
+
+# Silence some unwanted diagnostics from when fontforge imports.
 import os
 stderr_fd = os.dup(2)
-os.close(2)                 # fontforge outputs unwanted diagnostics
+os.close(2)
 import fontforge
+os.dup2(stderr_fd, 2)       # Restore stderr.
+
 import sys
 import argparse
-os.dup2(stderr_fd, 2)       # restore stderr
 
 WGL4 = [
     0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
