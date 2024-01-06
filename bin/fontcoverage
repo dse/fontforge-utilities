@@ -10,6 +10,7 @@ os.dup2(stderr_fd, 2)       # Restore stderr.
 
 import sys
 import argparse
+import unicodedata
 
 WGL4 = [
     0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
@@ -137,6 +138,7 @@ CODE_PAGE_437 = [
 
 parser = argparse.ArgumentParser(description = "print coverages for specified fonts")
 parser.add_argument('filenames', nargs = '+')
+parser.add_argument('--missing', action = 'store_true')
 args = parser.parse_args()
 
 def coverage(font, codepointList, name):
@@ -149,6 +151,15 @@ def coverage(font, codepointList, name):
             missing.append(codepoint)
     print("    %-33s (%4d codepoints): font has %4d (%6.2f%%)" %
           (name, len(codepointList), len(covered), 100.0 * len(covered) / len(codepointList)))
+    if args.missing:
+        print("        %d missing codepoints" % (len(codepointList) - len(covered)))
+        for codepoint in missing:
+            u = "U+%04X" % codepoint
+            try:
+                charname = unicodedata.name(chr(codepoint))
+            except ValueError:
+                charname = "(no name)"
+            print("            %-8s  %s" % (u, charname))
 
 for filename in args.filenames:
     print("%s:" % filename)
