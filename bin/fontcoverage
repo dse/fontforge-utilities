@@ -152,7 +152,7 @@ def coverage(font, codepointList, name):
     print("    %-33s (%4d codepoints): font has %4d (%6.2f%%)" %
           (name, len(codepointList), len(covered), 100.0 * len(covered) / len(codepointList)))
     if args.missing:
-        print("        %d missing codepoints" % (len(codepointList) - len(covered)))
+        print("        %d missing codepoints:" % (len(codepointList) - len(covered)))
         for codepoint in missing:
             u = "U+%04X" % codepoint
             try:
