@@ -1,16 +1,27 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 
-# Silence some unwanted diagnostics from when fontforge imports.
 import os
-stderr_fd = os.dup(2)
-os.close(2)
-import fontforge
-os.dup2(stderr_fd, 2)       # Restore stderr.
-
 import sys
 import argparse
 import unicodedata
+
+def main():
+    global args
+
+    silenceImportFontforge()
+
+
+    parser = argparse.ArgumentParser(description = "print coverages for specified fonts")
+    parser.add_argument('filenames', nargs = '+')
+    parser.add_argument('--missing', action = 'store_true')
+    args = parser.parse_args()
+
+    for filename in args.filenames:
+        print("%s:" % filename)
+        font = fontforge.open(filename)
+        coverage(font, WGL4, "Windows Glyph List 4")
+        coverage(font, CODE_PAGE_437, "IBM Code Page 437")
 
 WGL4 = [
     0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
@@ -136,12 +147,9 @@ CODE_PAGE_437 = [
     0x266a, 0x266b, 0x266c, 0x2713, 0x1d719,
 ]
 
-parser = argparse.ArgumentParser(description = "print coverages for specified fonts")
-parser.add_argument('filenames', nargs = '+')
-parser.add_argument('--missing', action = 'store_true')
-args = parser.parse_args()
-
 def coverage(font, codepointList, name):
+    global args
+
     covered = []
     missing = []
     for codepoint in codepointList:
@@ -161,8 +169,13 @@ def coverage(font, codepointList, name):
                 charname = "(no name)"
             print("            %-8s  %s" % (u, charname))
 
-for filename in args.filenames:
-    print("%s:" % filename)
-    font = fontforge.open(filename)
-    coverage(font, WGL4, "Windows Glyph List 4")
-    coverage(font, CODE_PAGE_437, "IBM Code Page 437")
+# Silence some unwanted diagnostics from when fontforge imports.
+def silenceImportFontforge():
+    import os
+    stderr_fd = os.dup(2)
+    os.close(2)
+    import fontforge
+    os.dup2(stderr_fd, 2)       # Restore stderr.
+
+if __name__ == '__main__':
+    main()
