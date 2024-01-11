@@ -9,8 +9,9 @@ import unicodedata
 def main():
     global args
 
-    silenceImportFontforge()
+    UTF_8_DEMO = getCodepointList(os.path.dirname(sys.argv[0]) + '/../lib/utf-8-test/UTF-8-demo.txt')
 
+    silenceImportFontforge()
 
     parser = argparse.ArgumentParser(description = "print coverages for specified fonts")
     parser.add_argument('filenames', nargs = '+')
@@ -22,6 +23,7 @@ def main():
         font = fontforge.open(filename)
         coverage(font, WGL4, "Windows Glyph List 4")
         coverage(font, CODE_PAGE_437, "IBM Code Page 437")
+        coverage(font, UTF_8_DEMO, "UTF-8-demo.txt")
 
 WGL4 = [
     0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
@@ -168,6 +170,16 @@ def coverage(font, codepointList, name):
             except ValueError:
                 charname = "(no name)"
             print("            %-8s  %s" % (u, charname))
+
+def getCodepointList(filename):
+    found = {}
+    fh = open(filename, 'r')
+    for line in fh.readlines():
+        for i in range(0, len(line)):
+            found[ord(line[i])] = True
+    codepoints = list(found.keys())
+    codepoints.sort()
+    return codepoints
 
 # Silence some unwanted diagnostics from when fontforge imports.
 def silenceImportFontforge():
