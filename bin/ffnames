@@ -11,4 +11,5 @@ for filename in sys.argv[1:]:
     print("    fontname: %s" % font.fontname)
     print("    familyname: %s" % font.familyname)
     print("    fullname: %s" % font.fullname)
-    
+    print("    weight: %s" % font.weight)
+

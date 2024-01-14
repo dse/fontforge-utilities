@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+import fontforge
+import getopt
+import sys
+
+# NOTES:
+# - SETWIDTH_NAME is an XLFD thing.
+# - ADD_STYLE_NAME is an XLFD thing.
+
+HELP_MESSAGE = '''
+usage:
+    ffchange [-f, --font-name=<name>] <filename> ...
+             [-m, --family-name=<name>]
+             [-w, --weight-name=<name>]
+             [-F, --full-name=<name>]
+             [--ascent=<int>]
+             [--copyright=<name>]
+             [--descent=<int>]
+             [--italic-angle=<deg>]
+    ffchange [<options> ...] <filename> -o|--outupt=<filename>
+    ffchange --help
+'''.strip()
+
+opts, args = getopt.gnu_getopt(sys.argv[1:],
+                               "hf:m:w:F:o:",
+                               [
+                                   "help",
+                                   "font-name=",
+                                   "family-name=",
+                                   "weight-name=",
+                                   "full-name=",
+                                   "ascent=",
+                                   "copyright=",
+                                   "descent=",
+                                   "italic-angle=",
+                                   "output=",
+                                   "output-filename=",
+                               ])
+
+theyWantHelp = False
+help = False
+
+fontName = None
+familyName = None
+weightName = None
+fullName = None
+ascent = None
+copyright = None
+descent = None
+italicAngle = None
+outputFilename = None
+
+for opt, arg in opts:
+    if opt in ('-h', '--help'):
+        theyWantHelp = True
+        help = True
+    elif opt in ('-f', '--font-name'):
+        fontName = arg
+    elif opt in ('-F', '--family-name'):
+        familyName = arg
+    elif opt in ('-w', '--weight-name'):
+        weightName = arg
+    elif opt in ('-F', '--full-name'):
+        fullName = arg
+    elif opt == '--ascent':
+        ascent = int(arg)
+    elif opt == '--copyright':
+        copyright = arg
+    elif opt == '--descent':
+        descent = int(arg)
+    elif opt == '--italic-angle':
+        italicAngle = int(arg)
+    elif opt in ('-o', '--output', '--output-filename'):
+        outputFilename = arg
+
+if theyWantHelp:
+    if help:
+        print(HELP_MESSAGE)
+    sys.exit()
+
+if len(args) < 1:
+    raise Exception("not enough arguments - must specify at least one filename")
+
+if outputFilename is not None and len(args) != 1:
+    raise Exception("too many arguments - must only supply one input filename if --output-filename is specified")
+
+for filename in args:
+    font = fontforge.open(filename)
+
+    if fontName is not None:
+        font.fontname = fontName
+    if familyName is not None:
+        font.familyname = familyName
+    if weightName is not None:
+        font.weight = weightName
+    if fullName is not None:
+        font.fullName = fullName
+    if ascent is not None:
+        font.ascent = ascent
+    if copyright is not None:
+        font.copyright = copyright
+    if descent is not None:
+        font.descent = descent
+    if italicAngle is not None:
+        font.italicangle = italicAngle
+
+    if outputFilename is not None:
+        outputFilename = filename
+    if os.path.splitext(filename)[1] == '.sfd':
+        font.save(filename)
+    else:
+        font.generate(filename)

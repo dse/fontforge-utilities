@@ -10,6 +10,8 @@
 
 `ffnames` prints each font's FontName, FamilyName, and FullName.
 
+`ffsfnt` prints each font's sfnt data.
+
 `ffbounds`
 
 `ffconvert`
@@ -37,7 +39,5 @@
 `italicangle`
 
 `makefontmono`
-
-`sfntnames`
 
 `sizefeature`
