@@ -1,0 +1,76 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+# font <filename>
+#     saves the current font, if any;
+#     loads a new font
+# bearings <char> <both>
+# bearings <char> <left> <right>
+#     set the left and right bearings on the specified
+#     character.  U+XXXX, 0xXXXX, and decimal XXXX accepted.
+#     A single character, including "0" to "9", means that
+#     character itself.
+
+import fontforge
+import sys
+import re
+
+filename = None
+font = None
+
+for line in sys.stdin:
+    line = line.rstrip().lstrip()
+    if re.search('^#', line):
+        continue
+    cmd, *args = line.split()
+    if cmd == "font":
+        if len(args) < 1:
+            raise Exception('font: not enough arguments')
+        if font != None and filename != None:
+            font.save(filename)
+            print("Saved %s" % filename)
+        filename = args[0]
+        font = fontforge.open(filename)
+        print("Opened %s" % filename)
+    if cmd == "bearings":
+        if len(args) < 2:
+            raise Exception('bearings: not enough arguments')
+        charSpec = args[0]
+        if len(args) == 2:
+            leftBearing = args[1]
+            rightBearing = args[1]
+        elif len(args) == 3:
+            leftBearing = args[1]
+            rightBearing = args[2]
+        else:
+            raise Exception('bearings: too many arguments')
+
+        match1 = re.search('^[Uu]\+([0-9A-Fa-f]+)$', charSpec)
+        match2 = re.search('^0[Xx]([0-9A-Fa-f]+)$', charSpec)
+        match3 = re.search('^[0-9]+$', charSpec)
+
+        if len(charSpec) == 1:
+            codepoint = ord(charSpec)
+        elif match1:
+            hexStr = match1[1]
+            codepoint = int(hexStr, 16)
+        elif match2:
+            hexStr = match2[1]
+            codepoint = int(hexStr, 16)
+        elif match3:
+            decStr = match3[0]
+            codepoint = int(charSpec)
+        else:
+            raise Exception('bearings: invalid character spec %s' % charSpec)
+        leftBearing = int(leftBearing)
+        rightBearing = int(rightBearing)
+        glyph = font[codepoint]
+        if not glyph:
+            sys.stderr.write('no such glyph: %s' % charSpec)
+            continue
+        glyph.left_side_bearing = leftBearing
+        glyph.right_side_bearing = rightBearing
+
+if font != None and filename != None:
+    font.save(filename)
+    print("Saved %s" % filename)
