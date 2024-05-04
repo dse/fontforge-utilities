@@ -6,10 +6,9 @@ import sys
 import re
 
 for filename in sys.argv[1:]:
+    font = fontforge.open(filename, ("fstypepermitted",))
     print(filename)
-    font = fontforge.open(filename)
     print("    fontname: %s" % font.fontname)
     print("    familyname: %s" % font.familyname)
     print("    fullname: %s" % font.fullname)
     print("    weight: %s" % font.weight)
-
