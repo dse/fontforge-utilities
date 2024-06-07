@@ -1,0 +1,73 @@
+#!/usr/bin/env fontforge
+# -*- python -*-
+
+import fontforge
+import os
+import argparse
+import json
+
+parser = argparse.ArgumentParser(description = "set kerning classes")
+parser.add_argument('fontFilename')
+parser.add_argument('kerningPairsFilename')
+args = parser.parse_args()
+
+font = fontforge.open(args.fontFilename)
+try:
+    font.removeLookup("kern")
+except OSError as e:
+    if e == "No lookup named kern exists":
+        pass
+    else:
+        raise
+font.addLookup("kern", "gpos_pair", None, [["kern", [["latn", ["dflt"]]]]])
+with open(args.kerningPairsFilename) as f:
+    for char in font:
+        font[char].left_side_bearing = 0
+        font[char].right_side_bearing = 0
+    data = json.load(f)
+    spacingArray = data["spacing"]
+    spacingHH = 0 # left bearing of H is 1/2 of this, as is right bearing
+    bearing = 0
+    for kernClass in data["kernClasses"]:
+        preceding = kernClass["preceding"]
+        following = kernClass["following"]
+        if type(preceding) == str:
+            preceding = list(preceding)
+        if type(following) == str:
+            following = list(following)
+        if "H" in preceding and "H" in following:
+            spacingHH = int(round(font.capHeight * 0.125 * spacingArray[kernClass["spacingIndex"]]))
+            bearing = int(round(font.capHeight * 0.0625 * spacingArray[kernClass["spacingIndex"]]))
+            break
+    for char in font:
+        print(char)
+        if char != "space" and char != "\u00a0":
+            font[char].left_side_bearing = bearing
+            font[char].right_side_bearing = bearing
+    if "space" in font:
+        font["space"].left_side_bearing = bearing
+        font["space"].right_side_bearing = bearing
+        font["space"].width = int(round(font.em * 0.2))
+    for kernClass in data["kernClasses"]:
+        preceding = kernClass["preceding"]
+        following = kernClass["following"]
+        if type(preceding) == str:
+            preceding = list(preceding)
+        if type(following) == str:
+            following = list(following)
+        spacingOffset = spacingArray[kernClass["spacingIndex"]]
+        spacingOffsetEm = int(round(font.capHeight * 0.125 * spacingOffset)) - spacingHH
+        offsets = [spacingOffsetEm] * len(preceding) * len(following)
+        print("%s %s %d" % (preceding, following, spacingOffsetEm))
+        font.addKerningClass(
+            "kern", 
+            kernClass["name"],
+            tuple(preceding),
+            tuple(following),
+            tuple(offsets)
+        )
+ext = os.path.splitext(args.fontFilename)[1]
+if ext == ".sfd":
+    font.save(args.fontFilename)
+else:
+    font.generate(args.fontFilename)
