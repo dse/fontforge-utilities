@@ -12,3 +12,5 @@ for filename in sys.argv[1:]:
     print("    familyname: %s" % font.familyname)
     print("    fullname: %s" % font.fullname)
     print("    weight: %s" % font.weight)
+    for record in font.sfnt_names:
+        print("    sfnt: %s" % repr(record))
