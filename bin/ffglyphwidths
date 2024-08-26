@@ -5,8 +5,17 @@ import fontforge
 import sys
 import os
 
+def u(codepoint):
+    if codepoint < 0:
+        return "%8s" % ("(%d)" % codepoint)
+    return "U+%04X" % codepoint
+
 for filename in sys.argv[1:]:
     font = fontforge.open(filename)
-    print("%s" % font)
+    if len(sys.argv) > 2:
+        print("%s:" % filename)
     for glyph in font.glyphs():
-        print("U+%04X %s %d" % (glyph.unicode, glyph, glyph.width))
+        print("    %8s  %-16s  %5d  %5.2f" % (u(glyph.unicode),
+                                              glyph.glyphname,
+                                              glyph.width,
+                                              glyph.width / font.em))
