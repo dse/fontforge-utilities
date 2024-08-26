@@ -1,0 +1,21 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import os
+
+def u(codepoint):
+    if codepoint < 0:
+        return "%8s" % ("(%d)" % codepoint)
+    return "U+%04X" % codepoint
+
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    if len(sys.argv) > 2:
+        print("%s:" % filename)
+    for glyph in font.glyphs():
+        print("    %8s  %-16s  %5d  %5.2f" % (u(glyph.unicode),
+                                              glyph.glyphname,
+                                              glyph.boundingBox()[1],
+                                              glyph.boundingBox()[1] / font.em))
