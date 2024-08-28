@@ -1,17 +1,32 @@
 #!/usr/bin/env fontforge
 # -*- mode: python; coding: utf-8 -*-
+
+# You might use this tool to figure out if a font is vertically
+# awkward.  Like, if too many characters occupy space above the ascent
+# line or too many characters occupy space below the descent line.
+
 import fontforge
 import sys
+import argparse
+
 WIDTH = 80
-ASCENT_COLUMN = 10
-DESCENT_COLUMN = 70
+ASCENT_COLUMN = 15
+DESCENT_COLUMN = 65
 HISTO_HEIGHT = 20
-for filename in sys.argv[1:]:
+
+parser = argparse.ArgumentParser(
+    description = "Print a histogram of a font's glyphs' vertical bounds"
+)
+parser.add_argument("filenames", nargs="+")
+
+args = parser.parse_args()
+
+for filename in args.filenames:
     font = fontforge.open(filename)
-    if len(sys.argv) > 2:
+    if len(args.filenames) > 1:
         print("%s:" % filename)
     def column(y):
-        """convert font y-coordinate to histogram column number"""
+        """convert font y-coordinate (0 = baseline) to histogram column number"""
         y = (y + font.descent) / (font.ascent + font.descent)
         y = round(ASCENT_COLUMN + (DESCENT_COLUMN - ASCENT_COLUMN) * y)
         return y
