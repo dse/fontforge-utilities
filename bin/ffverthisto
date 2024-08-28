@@ -9,10 +9,10 @@ import fontforge
 import sys
 import argparse
 
-WIDTH = 80
-ASCENT_COLUMN = 15
-DESCENT_COLUMN = 65
-HISTO_HEIGHT = 20
+WIDTH = 72
+ASCENT_COLUMN = 12
+DESCENT_COLUMN = 60
+HISTO_HEIGHT = 15
 
 parser = argparse.ArgumentParser(
     description = "Print a histogram of glyphs' vertical bounds of one or more fonts"
