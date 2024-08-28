@@ -15,7 +15,7 @@ DESCENT_COLUMN = 65
 HISTO_HEIGHT = 20
 
 parser = argparse.ArgumentParser(
-    description = "Print a histogram of a font's glyphs' vertical bounds"
+    description = "Print a histogram of glyphs' vertical bounds of one or more fonts"
 )
 parser.add_argument("filenames", nargs="+")
 
