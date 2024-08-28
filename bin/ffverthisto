@@ -1,0 +1,66 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+import fontforge
+import sys
+WIDTH = 80
+ASCENT_COLUMN = 10
+DESCENT_COLUMN = 70
+HISTO_HEIGHT = 20
+for filename in sys.argv[1:]:
+    font = fontforge.open(filename)
+    if len(sys.argv) > 2:
+        print("%s:" % filename)
+    def column(y):
+        """convert font y-coordinate to histogram column number"""
+        y = (y + font.descent) / (font.ascent + font.descent)
+        y = round(ASCENT_COLUMN + (DESCENT_COLUMN - ASCENT_COLUMN) * y)
+        return y
+    ascents = []
+    descents = []
+    for glyph in font.glyphs():
+        (xmin, ymin, xmax, ymax) = glyph.boundingBox();
+        ascents.append(ymax)
+        descents.append(ymin)
+    ascents.sort()
+    descents.sort()
+    baseline_col = column(0)
+    ex_ht_col    = column(font.xHeight)
+    cap_ht_col   = column(font.capHeight)
+    scale = "-" * WIDTH
+    scale = scale[0:ASCENT_COLUMN]  + "A" + scale[ASCENT_COLUMN+1:]
+    scale = scale[0:DESCENT_COLUMN] + "D" + scale[DESCENT_COLUMN+1:]
+    scale = scale[0:baseline_col]   + "B" + scale[baseline_col+1:]
+    scale = scale[0:cap_ht_col]     + "C" + scale[cap_ht_col+1:]
+    scale = scale[0:ex_ht_col]      + "X" + scale[ex_ht_col+1:]
+    ymin_histos = [0] * WIDTH
+    ymax_histos = [0] * WIDTH
+    descenderHeight = (font["p"].boundingBox()[1] + font["q"].boundingBox()[1]) / 2
+    for glyph in font.glyphs():
+        (xmin, ymin, xmax, ymax) = glyph.boundingBox();
+        ymin = column(ymin)
+        ymax = column(ymax)
+        if ymin >= 0 and ymin < WIDTH:
+            ymin_histos[ymin] += 1
+        if ymax >= 0 and ymax < WIDTH:
+            ymax_histos[ymax] += 1
+    histo_scale = max(ymin_histos + ymax_histos)
+    if histo_scale > 1:
+        ymin_histos = [round(y * HISTO_HEIGHT / histo_scale) for y in ymin_histos]
+        ymax_histos = [round(y * HISTO_HEIGHT / histo_scale) for y in ymax_histos]
+        print(scale)
+        while len([y for y in range(0, WIDTH)
+                   if ymin_histos[y] > 0 or ymax_histos[y] > 0]) > 0:
+            histo_row = ""
+            for y in range(0, WIDTH):
+                if ymin_histos[y] <= 0 and ymax_histos[y] <= 0:
+                    histo_row += " "
+                elif ymin_histos[y] > 0:
+                    histo_row += "<"
+                elif ymax_histos[y] > 0:
+                    histo_row += ">"
+                else:
+                    histo_row += " "
+            print(histo_row)
+            for y in range(0, WIDTH):
+                ymin_histos[y] -= 1
+                ymax_histos[y] -= 1
