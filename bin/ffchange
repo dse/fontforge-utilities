@@ -94,7 +94,7 @@ for filename in args:
     if weightName is not None:
         font.weight = weightName
     if fullName is not None:
-        font.fullName = fullName
+        font.fullname = fullName
     if ascent is not None:
         font.ascent = ascent
     if copyright is not None:
