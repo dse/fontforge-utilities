@@ -4,515 +4,544 @@
 import fontforge
 import argparse
 import unicodedata
-import html
 import sys
-import os
-import re
-
-sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
-sys.path.append(os.environ['HOME'] + '/git/dse.d/fontforge-utilities/lib')
-from ffutils import UnicodeBlocks
-
-class FontForgeGlyphs:
-    def run(self):
-        self.load()
-        if self.willListCoverageSummary:
-            self.listCoverageSummary()
-        elif self.willListCoverageDetail:
-            self.listCoverageDetail()
-        elif self.willListTableOfContents:
-            self.listTableOfContents()
-        else:
-            self.listGlyphs()
-
-    def load(self):
-        self.font = fontforge.open(self.sourceFilename)
-
-        self.glyphs = [self.font[name] for name in self.font]
-        self.sortedGlyphs = self.glyphs.copy()
-        self.sortedGlyphs.sort(key = lambda glyph: glyph.unicode)
-
-        self.codepointsCovered = [glyph.unicode for glyph in self.glyphs]
-
-        self.blockNamesCovered = list(set(
-            [UnicodeBlocks.block(codepoint) for codepoint in self.codepointsCovered]
-        ))
-        self.allBlockNames = UnicodeBlocks.blockNames()
-
-        self.allBlockNames.append('WGL4')
-        self.blockNamesCovered.append('WGL4')
-        self.allBlockNames.append('Code Page 437')
-        self.blockNamesCovered.append('Code Page 437')
-        self.allBlockNames.append('Code Page 437 Extended')
-        self.blockNamesCovered.append('Code Page 437 Extended')
-
-    def listGlyphs(self):
-        if self.isCompact:
-            self.listCompactGlyphsTable()
-            return
-        glyphs = self.sortedGlyphs if self.willSort else self.glyphs
-        lastBlock = None
-        block = None
-        for glyph in glyphs:
-            codepoint = glyph.unicode
-            if codepoint < 0:
-                continue
-            block = UnicodeBlocks.block(codepoint)
-            if block != lastBlock:
-                if self.willListBlocks and self.willSort:
-                    if self.format == 'text':
-                        print("# " + block)
-                        print('')
-                    elif self.format == 'html':
-                        self.endHTMLTable()
-                        print('<%s id="%s">' % (
-                            self.headingTagName,
-                            self.blockNameToAnchorId(block)
-                        ))
-                        print('    %s' % html.escape(block))
-                        print('</%s>' % self.headingTagName)
-                lastBlock = block
-            self.listCharacter(codepoint, isCovered = codepoint in self.codepointsCovered)
-        if self.format == 'html':
-            self.endHTMLTable()
-        elif self.format == 'text':
-            print('')
-
-    def listTableOfContents(self):
-        if self.format == 'html':
-            print('<ul>')
-        for blockName in self.allBlockNames:
-            if blockName in self.blockNamesCovered:
-                if self.format == 'html':
-                    print('    <li>');
-                    print('        <a href="#%s">%s</a>' % (
-                        self.blockNameToAnchorId(blockName),
-                        html.escape(blockName)
-                    ))
-                    print('    </li>');
-                else:
-                    print('-   %s' % blockName)
-        if self.format == 'html':
-            print('</ul>')
-        else:
-            print('')
-
-    def displayCharacter(self, codepoint):
-        try:
-            displayCharacter = unichr(codepoint)
-        except NameError:
-            displayCharacter = chr(codepoint)
-        if codepoint < 32:
-            displayCharacter = '???'
-        elif codepoint == 32:
-            displayCharacter = 'SPC'
-        elif codepoint == 127:
-            displayCharacter = 'DEL'
-        elif codepoint >= 128 and codepoint < 160:
-            displayCharacter = '???'
-        elif codepoint == 160:
-            displayCharacter = 'NBS'
-        return displayCharacter
-
-    def listCharacter(self, codepoint, listYesOrNo = False, isCovered = None):
-        try:
-            char = unichr(codepoint)
-        except NameError:
-            char = chr(codepoint)
-        try:
-            name = unicodedata.name(char)
-        except ValueError:
-            name = '<none>'
-        char = self.displayCharacter(codepoint)
-        hexCodepoint = self.uPlusHex(codepoint)
-        if self.isTabSeparatedValues():
-            if listYesOrNo:
-                line = [hexCodepoint, codepoint, char, yesOrNo, name]
-            else:
-                line = [hexCodepoint, codepoint, char, name]
-            if self.willListBlocks:
-                block = UnicodeBlocks.block(codepoint)
-                line += [block]
-            print("\t".join(line))
-        elif self.format == 'html':
-            if listYesOrNo:
-                if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
-                else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
-            else:
-                if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, isCovered = isCovered)
-                else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, isCovered = isCovered)
-        else:
-            if self.willListBlocks and not self.willSort:
-                print("%-8s  %7d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
-            else:
-                print("%-8s  %7d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
-
-    def listCoverageDetail(self):
-        for blockName in self.allBlockNames:
-            if blockName in self.blockNamesCovered:
-                self.listCoverageDetailForBlock(blockName)
-
-    def listCoverageDetailForBlock(self, blockName, includeControls = False):
-        if self.format == 'text':
-            print("# " + blockName)
-            print('')
-        elif self.format == 'html':
-            self.endHTMLTable()
-            print('<%s id="%s">' % (
-                self.headingTagName,
-                self.blockNameToAnchorId(blockName)
-            ))
-            print('    %s' % html.escape(blockName))
-            print('</%s>' % self.headingTagName)
-            print('')
-
-        self.listCoverageSummaryForBlock(blockName)
-
-        blockRange = None
-        if blockName == 'WGL4':
-            blockRange = UnicodeBlocks.WGL4
-        elif blockName == 'Code Page 437':
-            blockRange = UnicodeBlocks.CodePage437
-        elif blockName == 'Code Page 437 Extended':
-            blockRange = UnicodeBlocks.CodePage437Extended
-        else:
-            blockRange = UnicodeBlocks.blockRange(blockName)
-
-        for codepoint in blockRange:
-            try:
-                char = unichr(codepoint)
-            except NameError:
-                char = chr(codepoint)
-            try:
-                name = unicodedata.name(char)
-            except ValueError:
-                continue
-            if not includeControls:
-                if name == '<control>':
-                    continue
-            char = self.displayCharacter(codepoint)
-            hexCodepoint = self.uPlusHex(codepoint)
-            isCovered = codepoint in self.codepointsCovered
-            yesOrNo = 'yes' if (codepoint in self.codepointsCovered) else 'no'
-            if self.isTabSeparatedValues():
-                line = [hexCodepoint, codepoint, char, yesOrNo, name]
-                if self.willListBlocks:
-                    line += [block]
-                print("\t".join(line))
-            elif self.format == 'html':
-                if self.willListBlocks and not self.willSort:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
-                else:
-                    self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
-            else:
-                if self.willListBlocks and not self.willSort:
-                    print("%-8s  %7d  %-4s  %-3s  %s (%s)" % (hexCodepoint, codepoint, char, yesOrNo, name, block))
-                else:
-                    print("%-8s  %7d  %-4s  %-3s  %s" % (hexCodepoint, codepoint, char, yesOrNo, name))
-        if self.format == 'text':
-            print('')
-
-    def listCoverageSummary(self):
-        for blockName in self.allBlockNames:
-            if blockName in self.blockNamesCovered:
-                if self.format == 'html':
-                    self.startBlockCoverageTable()
-                self.listCoverageSummaryForBlock(blockName, asTableRow = True)
-        if self.format == 'html':
-            self.endBlockCoverageTable()
-
-    def listCoverageSummaryForBlock(self, blockName, asTableRow = False):
-        (total, coverage, blockRange) = self.computeBlockCoverage(blockName)
-        data = {
-            'blockName': blockName,
-            'firstCodepoint': ('U+%04X' % blockRange[0]),
-            'lastCodepoint': ('U+%04X' % blockRange[-1]),
-            'coverage': coverage,
-            'total': total,
-            'percentage': 100.0 * coverage / total
-        }
-        if self.isTabSeparatedValues():
-            line = [
-                data['firstCodepoint'],
-                data['lastCodepoint'],
-                data['blockName'],
-                data['coverage'],
-                data['total'],
-                ('%.2f%%' % data['percentage'])
-            ]
-            print("\t".join(line))
-        elif asTableRow:
-            if self.format == 'html':
-                print('        <tr>');
-                if self.hasAnchors:
-                    print('            <td><a href="%s#%s">%s<a></td>' % (
-                        self.anchorPageURL or '',
-                        self.blockNameToAnchorId(blockName),
-                        html.escape(blockName)
-                    ))
-                else:
-                    print('            <td>%s</td>' % html.escape(blockName))
-                print('            <td>U+%04X</td>' % blockRange[0])
-                print('            <td>U+%04X</td>' % blockRange[-1])
-                print('            <td>%d/%d</td>' % (coverage, total))
-                if total == 0:
-                    print('            <td class="text-right">-</td>')
-                else:
-                    print('            <td class="text-right">%.2f%%</td>' % (100.0 * coverage / total))
-                print('        </tr>');
-            else:
-                print('%(firstCodepoint)-8s  %(lastCodepoint)-8s  %(blockName)-40s  %(coverage)4d  %(total)4d  %(percentage).2f' % data)
-        else:
-            if self.format == 'html':
-                print('<p>')
-                print('    %(blockName)s: %(coverage)d/%(total)d (%(percentage).2f%%)' % data)
-                print('</p>')
-                print('')
-            else:
-                print('%(blockName)s: %(coverage)d/%(total)d (%(percentage).2f%%)' % data)
-                print('')
-
-    def startBlockCoverageTable(self):
-        if self.inHTMLTable:
-            return
-        self.inHTMLTable = True
-        if self.htmlClass != None:
-            print('<table class="%s">' % self.htmlClass);
-        else:
-            print('<table>')
-        print('    <thead>')
-        print('        <tr>')
-        print('            <th>Block</th>')
-        print('            <th>Start</th>')
-        print('            <th>End</th>')
-        print('            <th colspan="2">Glyph Coverage</th>')
-        print('        </tr>')
-        print('    </thead>')
-        print('    <tbody>')
-
-    def endBlockCoverageTable(self):
-        if not self.inHTMLTable:
-            return
-        self.inHTMLTable = False
-        print('    </tbody>')
-        print('</table>')
-
-    def computeBlockCoverage(self, blockName, includeControls = False):
-        blockRange = None
-        if blockName == 'WGL4':
-            blockRange = UnicodeBlocks.WGL4
-        elif blockName == 'Code Page 437':
-            blockRange = UnicodeBlocks.CodePage437
-        elif blockName == 'Code Page 437 Extended':
-            blockRange = UnicodeBlocks.CodePage437Extended
-        else:
-            blockRange = UnicodeBlocks.blockRange(blockName)
-        total = 0
-        coverage = 0
-        for codepoint in blockRange:
-            try:
-                char = unichr(codepoint)
-            except NameError:
-                char = chr(codepoint)
-            try:
-                name = unicodedata.name(char)
-            except ValueError:
-                continue
-            if not includeControls:
-                if name == '<control>':
-                    continue
-            total += 1
-            if codepoint in self.codepointsCovered:
-                coverage = coverage + 1
-        return (total, coverage, blockRange)
-
-    def listCompactGlyphsTable(self):
-        codepoints = [glyph.unicode for glyph in self.glyphs]
-        codepoints.sort()
-        codepointLines = list(set([int(codepoint / 16) * 16 for codepoint in codepoints]))
-        codepointLines.sort()
-        if self.format == 'html':
-            self.startCompactHTMLTable()
-        for codepointLine in codepointLines:
-            codepointRange = range(codepointLine, codepointLine + 16)
-            if self.format == 'html':
-                print('        <tr>')
-                print('            <td>U+%04X</td>' % codepointLine)
-            else:
-                line = '%-8s ' % ('U+%04X' % codepointLine)
-            for codepoint in codepointRange:
-                try:
-                    char = unichr(codepoint)
-                except NameError:
-                    char = chr(codepoint)
-                try:
-                    name = unicodedata.name(char)
-                except ValueError:
-                    name = '<none>'
-                displayCharacter = self.displayCharacter(codepoint)
-                if codepoint in codepoints:
-                    if self.format == 'html':
-                        print('            <td data-codepoint-full data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s">%s</td>' %
-                              (codepoint, codepoint, codepoint, html.escape(name), html.escape(char)))
-                    else:
-                        line += (' %-3s' % displayCharacter)
-                else:
-                    if self.format == 'html':
-                        print('            <td data-codepoint-empty data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s (not present)"></td>' %
-                              (codepoint, codepoint, codepoint, html.escape(name)))
-                    else:
-                        line += ('    ')
-            if self.format == 'html':
-                print('        </tr>')
-            else:
-                print(line)
-        if self.format == 'html':
-            self.endCompactHTMLTable()
-
-    def __init__(self, args):
-        self.args = None
-        self.sourceFilename = None
-        self.source = True
-        self.format = 'text'
-        self.willListBlocks = False
-        self.inHTMLTable = False
-        self.htmlClass = None
-        self.willListCoverageSummary = False
-        self.headingTagName = 'h2'
-        self.isCompact = False
-        self.willListCoverageDetail = False
-        self.willListTableOfContents = False
-        self.hasAnchors = False
-        self.anchorPageURL = None
-        if args != None:
-            self.setFromArgs(args)
-
-    def setFromArgs(self, args):
-        self.args = args
-        if args.source_filename != None:
-            self.sourceFilename = args.source_filename
-        if args.no_sort != None:
-            self.willSort = not args.no_sort
-        if args.format != None:
-            self.format = args.format
-        if args.list_blocks != None:
-            self.willListBlocks = args.list_blocks
-        if args.html_class != None:
-            self.htmlClass = args.html_class
-        if args.percentages != None:
-            self.willListCoverageSummary = args.percentages
-        if args.heading_tag_name != None:
-            self.headingTagName = args.heading_tag_name
-        if args.compact != None:
-            self.isCompact = args.compact
-        if args.with_coverage != None:
-            self.willListCoverageDetail = args.with_coverage
-        if args.table_of_contents != None:
-            self.willListTableOfContents = args.table_of_contents
-        if args.with_anchors != None:
-            self.hasAnchors = args.with_anchors
-        if args.anchor_page_url != None:
-            self.anchorPageURL = args.anchor_page_url
-
-    def uPlusHex(self, codepoint):
-        return "U+%04X" % codepoint
-
-    def isTabSeparatedValues(self):
-        return self.format == 'tab-separated-values' or self.format == 'tsv'
-
-    def startHTMLTable(self):
-        if self.inHTMLTable:
-            return
-        self.inHTMLTable = True
-        if self.htmlClass != None:
-            print('<table class="%s">' % self.htmlClass)
-        else:
-            print('<table>')
-        print('    <thead>')
-        print('        <tr>')
-        print('            <th>Codepoint</th>')
-        print('            <th>Decimal</th>')
-        print('            <th>Symbol</th>')
-        print('            <th>Name</th>')
-        if self.willListBlocks and not self.willSort:
-            print('            <th>Block</th>')
-        print('        </tr>')
-        print('    </thead>')
-        print('    <tbody>')
-
-    def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None, yesOrNo = None, isCovered = None):
-        self.startHTMLTable()
-        if isCovered == None:
-            print('        <tr>')
-        else:
-            print('        <tr class="%s">' % ('is-covered' if isCovered else 'is-not-covered'))
-        print('            <td data-title="Codepoint">%s</td>' % hexCodepoint)
-        print('            <td data-title="Decimal">%d</td>' % codepoint)
-        print('            <td data-title="Symbol">%s</td>' % html.escape(char))
-        if yesOrNo != None:
-            print('            <td data-title="Covered">%s</td>' % html.escape(yesOrNo))
-        print('            <td data-title="Name">%s</td>' % html.escape(name))
-        if block != None:
-            print('            <td data-title="Block">%s</td>' % html.escape(block))
-        print('        </tr>')
-
-    def endHTMLTable(self):
-        if not self.inHTMLTable:
-            return
-        self.inHTMLTable = False
-        print('    </tbody>')
-        print('</table>')
-
-    def startCompactHTMLTable(self):
-        if self.inHTMLTable:
-            return
-        self.inHTMLTable = True
-        if self.htmlClass != None:
-            print('<table class="%s">' % self.htmlClass)
-        else:
-            print('<table>')
-        print('    <thead>')
-        print('        <tr>')
-        print('            <th></th>')
-        for i in range(0, 16):
-            print('            <th>%1X</th>' % i)
-        print('        </tr>')
-        print('    </thead>')
-        print('    <tbody>')
-
-    def endCompactHTMLTable(self):
-        if not self.inHTMLTable:
-            return
-        self.inHTMLTable = False
-        print('    </tbody>')
-        print('</table>')
-
-    def blockNameToAnchorId(self, blockName):
-        result = blockName.replace(' ', '-')
-        result = re.sub(r'[^- [:alnum:]]', '-', result)
-        result = 'Unicode-Block--' + result
-        return result
 
 parser = argparse.ArgumentParser(
-    description = 'List a font\'s glyphs.'
+    description = "convert between font formats"
 )
-parser.add_argument('source_filename')
-parser.add_argument('--no-sort', action = 'store_true')
-parser.add_argument('--format', type = str)
-parser.add_argument('--list-blocks', action = 'store_true')
-parser.add_argument('--class', type = str, dest = 'html_class')
-parser.add_argument('--percentages', '--coverage-summary', action = 'store_true')
-parser.add_argument('--heading-tag-name', type = str)
-parser.add_argument('--compact', action = 'store_true')
-parser.add_argument('--with-coverage', '--coverage-detail', action = 'store_true')
-parser.add_argument('--table-of-contents', action = 'store_true')
-parser.add_argument('--with-anchors', action = 'store_true')
-parser.add_argument('--anchor-page-url', type = str)
+
+parser.add_argument('--no-hints', action='store_true')
+parser.add_argument('--name-prefix', type=str)
+parser.add_argument('filename', nargs='+')
 
 args = parser.parse_args()
-ffg = FontForgeGlyphs(args)
-ffg.run()
+
+for filename in args.filename:
+    print("%s:" % filename)
+    font = fontforge.open(filename)
+    for glyph in font.glyphs():
+        sys.stdout.write("    %7d  %-16s" % (glyph.unicode, glyph.glyphname))
+        if glyph.unicode >= 0:
+            u = "U+%04X" % glyph.unicode if glyph.unicode >= 0 else "(%d)" % glyph.unicode
+            try:
+                name = unicodedata.name(chr(glyph.unicode)) if glyph.unicode >= 0 else "<none>"
+            except ValueError:
+                name = '<none>'
+            sys.stdout.write("  %8s  %s" % (u, name))
+        sys.stdout.write("\n")
+
+# import fontforge
+# import argparse
+# import unicodedata
+# import html
+# import sys
+# import os
+# import re
+
+# sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+# sys.path.append(os.environ['HOME'] + '/git/dse.d/fontforge-utilities/lib')
+# from ffutils import UnicodeBlocks
+
+# class FontForgeGlyphs:
+#     def run(self):
+#         self.load()
+#         if self.willListCoverageSummary:
+#             self.listCoverageSummary()
+#         elif self.willListCoverageDetail:
+#             self.listCoverageDetail()
+#         elif self.willListTableOfContents:
+#             self.listTableOfContents()
+#         else:
+#             self.listGlyphs()
+
+#     def load(self):
+#         self.font = fontforge.open(self.sourceFilename)
+
+#         self.glyphs = [self.font[name] for name in self.font]
+#         self.sortedGlyphs = self.glyphs.copy()
+#         self.sortedGlyphs.sort(key = lambda glyph: glyph.unicode)
+
+#         self.codepointsCovered = [glyph.unicode for glyph in self.glyphs]
+
+#         self.blockNamesCovered = list(set(
+#             [UnicodeBlocks.block(codepoint) for codepoint in self.codepointsCovered]
+#         ))
+#         self.allBlockNames = UnicodeBlocks.blockNames()
+
+#         self.allBlockNames.append('WGL4')
+#         self.blockNamesCovered.append('WGL4')
+#         self.allBlockNames.append('Code Page 437')
+#         self.blockNamesCovered.append('Code Page 437')
+#         self.allBlockNames.append('Code Page 437 Extended')
+#         self.blockNamesCovered.append('Code Page 437 Extended')
+
+#     def listGlyphs(self):
+#         if self.isCompact:
+#             self.listCompactGlyphsTable()
+#             return
+#         glyphs = self.sortedGlyphs if self.willSort else self.glyphs
+#         lastBlock = None
+#         block = None
+#         for glyph in glyphs:
+#             codepoint = glyph.unicode
+#             if codepoint < 0:
+#                 continue
+#             block = UnicodeBlocks.block(codepoint)
+#             if block != lastBlock:
+#                 if self.willListBlocks and self.willSort:
+#                     if self.format == 'text':
+#                         print("# " + block)
+#                         print('')
+#                     elif self.format == 'html':
+#                         self.endHTMLTable()
+#                         print('<%s id="%s">' % (
+#                             self.headingTagName,
+#                             self.blockNameToAnchorId(block)
+#                         ))
+#                         print('    %s' % html.escape(block))
+#                         print('</%s>' % self.headingTagName)
+#                 lastBlock = block
+#             self.listCharacter(codepoint, isCovered = codepoint in self.codepointsCovered)
+#         if self.format == 'html':
+#             self.endHTMLTable()
+#         elif self.format == 'text':
+#             print('')
+
+#     def listTableOfContents(self):
+#         if self.format == 'html':
+#             print('<ul>')
+#         for blockName in self.allBlockNames:
+#             if blockName in self.blockNamesCovered:
+#                 if self.format == 'html':
+#                     print('    <li>');
+#                     print('        <a href="#%s">%s</a>' % (
+#                         self.blockNameToAnchorId(blockName),
+#                         html.escape(blockName)
+#                     ))
+#                     print('    </li>');
+#                 else:
+#                     print('-   %s' % blockName)
+#         if self.format == 'html':
+#             print('</ul>')
+#         else:
+#             print('')
+
+#     def displayCharacter(self, codepoint):
+#         try:
+#             displayCharacter = unichr(codepoint)
+#         except NameError:
+#             displayCharacter = chr(codepoint)
+#         if codepoint < 32:
+#             displayCharacter = '???'
+#         elif codepoint == 32:
+#             displayCharacter = 'SPC'
+#         elif codepoint == 127:
+#             displayCharacter = 'DEL'
+#         elif codepoint >= 128 and codepoint < 160:
+#             displayCharacter = '???'
+#         elif codepoint == 160:
+#             displayCharacter = 'NBS'
+#         return displayCharacter
+
+#     def listCharacter(self, codepoint, listYesOrNo = False, isCovered = None):
+#         try:
+#             char = unichr(codepoint)
+#         except NameError:
+#             char = chr(codepoint)
+#         try:
+#             name = unicodedata.name(char)
+#         except ValueError:
+#             name = '<none>'
+#         char = self.displayCharacter(codepoint)
+#         hexCodepoint = self.uPlusHex(codepoint)
+#         if self.isTabSeparatedValues():
+#             if listYesOrNo:
+#                 line = [hexCodepoint, codepoint, char, yesOrNo, name]
+#             else:
+#                 line = [hexCodepoint, codepoint, char, name]
+#             if self.willListBlocks:
+#                 block = UnicodeBlocks.block(codepoint)
+#                 line += [block]
+#             print("\t".join(line))
+#         elif self.format == 'html':
+#             if listYesOrNo:
+#                 if self.willListBlocks and not self.willSort:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
+#                 else:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
+#             else:
+#                 if self.willListBlocks and not self.willSort:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, isCovered = isCovered)
+#                 else:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, isCovered = isCovered)
+#         else:
+#             if self.willListBlocks and not self.willSort:
+#                 print("%-8s  %7d  %-4s  %s (%s)" % (hexCodepoint, codepoint, char, name, block))
+#             else:
+#                 print("%-8s  %7d  %-4s  %s" % (hexCodepoint, codepoint, char, name))
+
+#     def listCoverageDetail(self):
+#         for blockName in self.allBlockNames:
+#             if blockName in self.blockNamesCovered:
+#                 self.listCoverageDetailForBlock(blockName)
+
+#     def listCoverageDetailForBlock(self, blockName, includeControls = False):
+#         if self.format == 'text':
+#             print("# " + blockName)
+#             print('')
+#         elif self.format == 'html':
+#             self.endHTMLTable()
+#             print('<%s id="%s">' % (
+#                 self.headingTagName,
+#                 self.blockNameToAnchorId(blockName)
+#             ))
+#             print('    %s' % html.escape(blockName))
+#             print('</%s>' % self.headingTagName)
+#             print('')
+
+#         self.listCoverageSummaryForBlock(blockName)
+
+#         blockRange = None
+#         if blockName == 'WGL4':
+#             blockRange = UnicodeBlocks.WGL4
+#         elif blockName == 'Code Page 437':
+#             blockRange = UnicodeBlocks.CodePage437
+#         elif blockName == 'Code Page 437 Extended':
+#             blockRange = UnicodeBlocks.CodePage437Extended
+#         else:
+#             blockRange = UnicodeBlocks.blockRange(blockName)
+
+#         for codepoint in blockRange:
+#             try:
+#                 char = unichr(codepoint)
+#             except NameError:
+#                 char = chr(codepoint)
+#             try:
+#                 name = unicodedata.name(char)
+#             except ValueError:
+#                 continue
+#             if not includeControls:
+#                 if name == '<control>':
+#                     continue
+#             char = self.displayCharacter(codepoint)
+#             hexCodepoint = self.uPlusHex(codepoint)
+#             isCovered = codepoint in self.codepointsCovered
+#             yesOrNo = 'yes' if (codepoint in self.codepointsCovered) else 'no'
+#             if self.isTabSeparatedValues():
+#                 line = [hexCodepoint, codepoint, char, yesOrNo, name]
+#                 if self.willListBlocks:
+#                     line += [block]
+#                 print("\t".join(line))
+#             elif self.format == 'html':
+#                 if self.willListBlocks and not self.willSort:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, block = block, yesOrNo = yesOrNo, isCovered = isCovered)
+#                 else:
+#                     self.printHTMLRow(hexCodepoint, codepoint = codepoint, char = char, name = name, yesOrNo = yesOrNo, isCovered = isCovered)
+#             else:
+#                 if self.willListBlocks and not self.willSort:
+#                     print("%-8s  %7d  %-4s  %-3s  %s (%s)" % (hexCodepoint, codepoint, char, yesOrNo, name, block))
+#                 else:
+#                     print("%-8s  %7d  %-4s  %-3s  %s" % (hexCodepoint, codepoint, char, yesOrNo, name))
+#         if self.format == 'text':
+#             print('')
+
+#     def listCoverageSummary(self):
+#         for blockName in self.allBlockNames:
+#             if blockName in self.blockNamesCovered:
+#                 if self.format == 'html':
+#                     self.startBlockCoverageTable()
+#                 self.listCoverageSummaryForBlock(blockName, asTableRow = True)
+#         if self.format == 'html':
+#             self.endBlockCoverageTable()
+
+#     def listCoverageSummaryForBlock(self, blockName, asTableRow = False):
+#         (total, coverage, blockRange) = self.computeBlockCoverage(blockName)
+#         data = {
+#             'blockName': blockName,
+#             'firstCodepoint': ('U+%04X' % blockRange[0]),
+#             'lastCodepoint': ('U+%04X' % blockRange[-1]),
+#             'coverage': coverage,
+#             'total': total,
+#             'percentage': 100.0 * coverage / total
+#         }
+#         if self.isTabSeparatedValues():
+#             line = [
+#                 data['firstCodepoint'],
+#                 data['lastCodepoint'],
+#                 data['blockName'],
+#                 data['coverage'],
+#                 data['total'],
+#                 ('%.2f%%' % data['percentage'])
+#             ]
+#             print("\t".join(line))
+#         elif asTableRow:
+#             if self.format == 'html':
+#                 print('        <tr>');
+#                 if self.hasAnchors:
+#                     print('            <td><a href="%s#%s">%s<a></td>' % (
+#                         self.anchorPageURL or '',
+#                         self.blockNameToAnchorId(blockName),
+#                         html.escape(blockName)
+#                     ))
+#                 else:
+#                     print('            <td>%s</td>' % html.escape(blockName))
+#                 print('            <td>U+%04X</td>' % blockRange[0])
+#                 print('            <td>U+%04X</td>' % blockRange[-1])
+#                 print('            <td>%d/%d</td>' % (coverage, total))
+#                 if total == 0:
+#                     print('            <td class="text-right">-</td>')
+#                 else:
+#                     print('            <td class="text-right">%.2f%%</td>' % (100.0 * coverage / total))
+#                 print('        </tr>');
+#             else:
+#                 print('%(firstCodepoint)-8s  %(lastCodepoint)-8s  %(blockName)-40s  %(coverage)4d  %(total)4d  %(percentage).2f' % data)
+#         else:
+#             if self.format == 'html':
+#                 print('<p>')
+#                 print('    %(blockName)s: %(coverage)d/%(total)d (%(percentage).2f%%)' % data)
+#                 print('</p>')
+#                 print('')
+#             else:
+#                 print('%(blockName)s: %(coverage)d/%(total)d (%(percentage).2f%%)' % data)
+#                 print('')
+
+#     def startBlockCoverageTable(self):
+#         if self.inHTMLTable:
+#             return
+#         self.inHTMLTable = True
+#         if self.htmlClass != None:
+#             print('<table class="%s">' % self.htmlClass);
+#         else:
+#             print('<table>')
+#         print('    <thead>')
+#         print('        <tr>')
+#         print('            <th>Block</th>')
+#         print('            <th>Start</th>')
+#         print('            <th>End</th>')
+#         print('            <th colspan="2">Glyph Coverage</th>')
+#         print('        </tr>')
+#         print('    </thead>')
+#         print('    <tbody>')
+
+#     def endBlockCoverageTable(self):
+#         if not self.inHTMLTable:
+#             return
+#         self.inHTMLTable = False
+#         print('    </tbody>')
+#         print('</table>')
+
+#     def computeBlockCoverage(self, blockName, includeControls = False):
+#         blockRange = None
+#         if blockName == 'WGL4':
+#             blockRange = UnicodeBlocks.WGL4
+#         elif blockName == 'Code Page 437':
+#             blockRange = UnicodeBlocks.CodePage437
+#         elif blockName == 'Code Page 437 Extended':
+#             blockRange = UnicodeBlocks.CodePage437Extended
+#         else:
+#             blockRange = UnicodeBlocks.blockRange(blockName)
+#         total = 0
+#         coverage = 0
+#         for codepoint in blockRange:
+#             try:
+#                 char = unichr(codepoint)
+#             except NameError:
+#                 char = chr(codepoint)
+#             try:
+#                 name = unicodedata.name(char)
+#             except ValueError:
+#                 continue
+#             if not includeControls:
+#                 if name == '<control>':
+#                     continue
+#             total += 1
+#             if codepoint in self.codepointsCovered:
+#                 coverage = coverage + 1
+#         return (total, coverage, blockRange)
+
+#     def listCompactGlyphsTable(self):
+#         codepoints = [glyph.unicode for glyph in self.glyphs]
+#         codepoints.sort()
+#         codepointLines = list(set([int(codepoint / 16) * 16 for codepoint in codepoints]))
+#         codepointLines.sort()
+#         if self.format == 'html':
+#             self.startCompactHTMLTable()
+#         for codepointLine in codepointLines:
+#             codepointRange = range(codepointLine, codepointLine + 16)
+#             if self.format == 'html':
+#                 print('        <tr>')
+#                 print('            <td>U+%04X</td>' % codepointLine)
+#             else:
+#                 line = '%-8s ' % ('U+%04X' % codepointLine)
+#             for codepoint in codepointRange:
+#                 try:
+#                     char = unichr(codepoint)
+#                 except NameError:
+#                     char = chr(codepoint)
+#                 try:
+#                     name = unicodedata.name(char)
+#                 except ValueError:
+#                     name = '<none>'
+#                 displayCharacter = self.displayCharacter(codepoint)
+#                 if codepoint in codepoints:
+#                     if self.format == 'html':
+#                         print('            <td data-codepoint-full data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s">%s</td>' %
+#                               (codepoint, codepoint, codepoint, html.escape(name), html.escape(char)))
+#                     else:
+#                         line += (' %-3s' % displayCharacter)
+#                 else:
+#                     if self.format == 'html':
+#                         print('            <td data-codepoint-empty data-codepoint-decimal="%s" data-codepoint="U+%04X" title="U+%04X %s (not present)"></td>' %
+#                               (codepoint, codepoint, codepoint, html.escape(name)))
+#                     else:
+#                         line += ('    ')
+#             if self.format == 'html':
+#                 print('        </tr>')
+#             else:
+#                 print(line)
+#         if self.format == 'html':
+#             self.endCompactHTMLTable()
+
+#     def __init__(self, args):
+#         self.args = None
+#         self.sourceFilename = None
+#         self.source = True
+#         self.format = 'text'
+#         self.willListBlocks = False
+#         self.inHTMLTable = False
+#         self.htmlClass = None
+#         self.willListCoverageSummary = False
+#         self.headingTagName = 'h2'
+#         self.isCompact = False
+#         self.willListCoverageDetail = False
+#         self.willListTableOfContents = False
+#         self.hasAnchors = False
+#         self.anchorPageURL = None
+#         if args != None:
+#             self.setFromArgs(args)
+
+#     def setFromArgs(self, args):
+#         self.args = args
+#         if args.source_filename != None:
+#             self.sourceFilename = args.source_filename
+#         if args.no_sort != None:
+#             self.willSort = not args.no_sort
+#         if args.format != None:
+#             self.format = args.format
+#         if args.list_blocks != None:
+#             self.willListBlocks = args.list_blocks
+#         if args.html_class != None:
+#             self.htmlClass = args.html_class
+#         if args.percentages != None:
+#             self.willListCoverageSummary = args.percentages
+#         if args.heading_tag_name != None:
+#             self.headingTagName = args.heading_tag_name
+#         if args.compact != None:
+#             self.isCompact = args.compact
+#         if args.with_coverage != None:
+#             self.willListCoverageDetail = args.with_coverage
+#         if args.table_of_contents != None:
+#             self.willListTableOfContents = args.table_of_contents
+#         if args.with_anchors != None:
+#             self.hasAnchors = args.with_anchors
+#         if args.anchor_page_url != None:
+#             self.anchorPageURL = args.anchor_page_url
+
+#     def uPlusHex(self, codepoint):
+#         return "U+%04X" % codepoint
+
+#     def isTabSeparatedValues(self):
+#         return self.format == 'tab-separated-values' or self.format == 'tsv'
+
+#     def startHTMLTable(self):
+#         if self.inHTMLTable:
+#             return
+#         self.inHTMLTable = True
+#         if self.htmlClass != None:
+#             print('<table class="%s">' % self.htmlClass)
+#         else:
+#             print('<table>')
+#         print('    <thead>')
+#         print('        <tr>')
+#         print('            <th>Codepoint</th>')
+#         print('            <th>Decimal</th>')
+#         print('            <th>Symbol</th>')
+#         print('            <th>Name</th>')
+#         if self.willListBlocks and not self.willSort:
+#             print('            <th>Block</th>')
+#         print('        </tr>')
+#         print('    </thead>')
+#         print('    <tbody>')
+
+#     def printHTMLRow(self, hexCodepoint, codepoint, char, name, block = None, yesOrNo = None, isCovered = None):
+#         self.startHTMLTable()
+#         if isCovered == None:
+#             print('        <tr>')
+#         else:
+#             print('        <tr class="%s">' % ('is-covered' if isCovered else 'is-not-covered'))
+#         print('            <td data-title="Codepoint">%s</td>' % hexCodepoint)
+#         print('            <td data-title="Decimal">%d</td>' % codepoint)
+#         print('            <td data-title="Symbol">%s</td>' % html.escape(char))
+#         if yesOrNo != None:
+#             print('            <td data-title="Covered">%s</td>' % html.escape(yesOrNo))
+#         print('            <td data-title="Name">%s</td>' % html.escape(name))
+#         if block != None:
+#             print('            <td data-title="Block">%s</td>' % html.escape(block))
+#         print('        </tr>')
+
+#     def endHTMLTable(self):
+#         if not self.inHTMLTable:
+#             return
+#         self.inHTMLTable = False
+#         print('    </tbody>')
+#         print('</table>')
+
+#     def startCompactHTMLTable(self):
+#         if self.inHTMLTable:
+#             return
+#         self.inHTMLTable = True
+#         if self.htmlClass != None:
+#             print('<table class="%s">' % self.htmlClass)
+#         else:
+#             print('<table>')
+#         print('    <thead>')
+#         print('        <tr>')
+#         print('            <th></th>')
+#         for i in range(0, 16):
+#             print('            <th>%1X</th>' % i)
+#         print('        </tr>')
+#         print('    </thead>')
+#         print('    <tbody>')
+
+#     def endCompactHTMLTable(self):
+#         if not self.inHTMLTable:
+#             return
+#         self.inHTMLTable = False
+#         print('    </tbody>')
+#         print('</table>')
+
+#     def blockNameToAnchorId(self, blockName):
+#         result = blockName.replace(' ', '-')
+#         result = re.sub(r'[^- [:alnum:]]', '-', result)
+#         result = 'Unicode-Block--' + result
+#         return result
+
+# parser = argparse.ArgumentParser(
+#     description = 'List a font\'s glyphs.'
+# )
+# parser.add_argument('source_filename')
+# parser.add_argument('--no-sort', action = 'store_true')
+# parser.add_argument('--format', type = str)
+# parser.add_argument('--list-blocks', action = 'store_true')
+# parser.add_argument('--class', type = str, dest = 'html_class')
+# parser.add_argument('--percentages', '--coverage-summary', action = 'store_true')
+# parser.add_argument('--heading-tag-name', type = str)
+# parser.add_argument('--compact', action = 'store_true')
+# parser.add_argument('--with-coverage', '--coverage-detail', action = 'store_true')
+# parser.add_argument('--table-of-contents', action = 'store_true')
+# parser.add_argument('--with-anchors', action = 'store_true')
+# parser.add_argument('--anchor-page-url', type = str)
+
+# args = parser.parse_args()
+# ffg = FontForgeGlyphs(args)
+# ffg.run()
