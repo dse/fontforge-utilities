@@ -1,0 +1,28 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import argparse
+
+parser = argparse.ArgumentParser(
+    description = "Detect if fonts will be recognized as monospace"
+)
+parser.add_argument("filenames", nargs="+")
+
+args = parser.parse_args()
+
+exit_code = 0
+for filename in args.filenames:
+    font = fontforge.open(filename)
+    widths = {}
+    for glyph in font.glyphs():
+        widths[glyph.width] = widths[glyph.width] + 1 if glyph.width in widths else 1
+    keys = list(widths.keys())
+    if len(keys) != 1:
+        exit_code = 1
+        print("%s: not monospace" % filename)
+    else:
+        print("%s: is monospace" % filename)
+
+exit(exit_code)
