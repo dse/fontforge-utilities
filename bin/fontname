@@ -1,0 +1,35 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
+
+import ffutils
+import argparse
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+
+    exit_code = 0
+    for filename in args.filenames:
+        font = ffutils.load_font(filename)
+        if font is None:
+            exit_code = 1
+            continue
+        if os.path.basename(sys.argv[0]) == "fontname":
+            print("%-32s  %s" % (font.fontname, filename))
+        elif os.path.basename(sys.argv[0]) == "fontfamily":
+            print("%-32s  %s" % (font.familyname, filename))
+        elif os.path.basename(sys.argv[0]) == "fontfull":
+            print("%-48s  %s" % (font.fullname, filename))
+        elif os.path.basename(sys.argv[0]) == "fontweight":
+            print("%-32s  %s" % (font.weight, filename))
+        else:
+            print("%-32s  %s" % (font.fontname, filename))
+
+ffutils.import_fontforge()
+main()
