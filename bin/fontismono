@@ -1,7 +1,11 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 
+import os
 import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
+
+import ffutils
 import argparse
 
 verbose_level = 0
@@ -37,7 +41,7 @@ def main():
 
     exit_code = 0
     for filename in args.filenames:
-        font = load_font(filename)
+        font = ffutils.load_font(filename)
         if font is None:
             exit_code = 1
             continue
@@ -79,26 +83,5 @@ def top_glyph_width_percentage(font):
     widths.sort(reverse=True, key=lambda width: width_counts[width])
     return width_counts[widths[0]] / len(list(font.glyphs())) * 100
 
-def load_font(filename):
-    global exit_code
-    try:
-        os.close(2)
-        font = fontforge.open(filename)
-        os.dup2(stderr_fd, 2)
-        return font
-    except OSError as e:
-        exit_code = 1
-        os.dup2(stderr_fd, 2)
-        sys.stderr.write("%s: %s\n" % (filename, e))
-        return None
-
-def import_fontforge():
-    global os, stderr_fd
-    import os
-    stderr_fd = os.dup(2)
-    os.close(2)
-    import fontforge
-    os.dup2(stderr_fd, 2)
-
-import_fontforge()
+ffutils.import_fontforge()
 main()
