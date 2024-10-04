@@ -68,11 +68,12 @@ for filename in args.filenames:
     if font.os2_panose[3] != 9:
         if not allowIncorrectPanose:
             fontResult = False
-            print("%s: ERROR: incorrect panose value" % filename)
-        if outputLevel >= 2:
+        if outputLevel >= 3:
             print("%s: panose value is %s; fourth value of tuple should be 9 for monospace fonts" % (filename, str(font.os2_panose)))
-        elif outputLevel >= 1:
+        elif outputLevel >= 2:
             print("%s: incorrect panose #4 value %d; should be 9 for monospace fonts" % (filename, font.os2_panose[3]))
+        elif outputLevel >= 1:
+            print("%s: ERROR: incorrect panose value" % filename)
 
     glyphWidthCounts = {}       # count of glyphs by glyph width
     glyphWidthArrays = {}       # array of glyphs by glyph width
@@ -88,6 +89,8 @@ for filename in args.filenames:
             glyphWidthArrays[width] = [glyph]
         glyphCount += 1
 
+    percentage = 100
+
     if len(glyphWidthCounts) != 1: # all glyph widths aren't the same
         widths = list(glyphWidthCounts.keys())
         widths.sort(key=lambda w: glyphWidthCounts[w])
@@ -99,7 +102,8 @@ for filename in args.filenames:
             elif outputLevel >= 1:
                 print("%s: most glyphs are the same width" % filename)
         else:
-            print("%s: ERROR: %s glyphs are the same width" % (filename, "less than 95% of" if mostly else "not all"))
+            if outputLevel >= 1:
+                print("%s: ERROR: %s glyphs are the same width" % (filename, "less than 95% of" if mostly else "not all"))
             fontResult = False
             hasMajority = percentage >= 50
             if hasMajority:
@@ -114,10 +118,16 @@ for filename in args.filenames:
 
     if fontResult:
         if outputLevel >= 0:
-            print("%s: will be detected as monospace" % filename)
+            if mostly:
+                if percentage == 100:
+                    print("%s: is monospace" % filename)
+                else:
+                    print("%s: looks like monospace" % filename)
+            else:
+                print("%s: will be detected as monospace" % filename)
     else:
         result = False
-        if outputLevel >= -1:
+        if outputLevel > -1:
             print("%s: will NOT be detected as monospace" % filename)
 
 if not result:
