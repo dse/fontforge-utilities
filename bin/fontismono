@@ -1,0 +1,104 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import sys
+import argparse
+
+verbose_level = 0
+quiet_level = 0
+is_verbose = False
+is_quiet = False
+
+class VerboseAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        global verbose_level, quiet_level, is_verbose, is_quiet
+        verbose_level += 1
+        is_verbose = True
+        is_quiet = False
+
+class QuietAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        global verbose_level, quiet_level, is_verbose, is_quiet
+        quiet_level += 1
+        is_verbose = False
+        is_quiet = True
+
+output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-q', '--quiet',   nargs=0, action=QuietAction)
+    parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction)
+    parser.add_argument('-m', '--mostly',  action='store_true')
+    parser.add_argument('-p', '--panose',  action='store_true')
+    args = parser.parse_args()
+
+    exit_code = 0
+    for filename in args.filenames:
+        font = load_font(filename)
+        if font is None:
+            exit_code = 1
+            continue
+        fontismono(filename, font)
+
+def fontismono(filename, font):
+    global quiet_level, verbose_level, output_level
+    global is_quiet, is_verbose, args, exit_code
+    percentage = top_glyph_width_percentage(font)
+    is_mono = (percentage == 100) or (args.mostly and percentage >= 95)
+    is_panose = font.os2_panose[3] == 9
+    if not args.panose:
+        is_mono = is_mono and is_panose
+    if is_mono:
+        if is_quiet:
+            print(filename)
+        else:
+            print("%6.2f%%  Y  %s" % (percentage, filename))
+    else:
+        exit_code = 1
+        if not is_quiet:
+            print("%6.2f%%  N  %s" % (percentage, filename))
+    if is_verbose:
+        if not is_panose:
+            print("    fourth value of panose tuple is %d; expected %d" %
+                  (font.os2_panose[3], 9))
+
+def top_glyph_width_percentage(font):
+    width_counts = {}
+    for glyph in font.glyphs():
+        width = glyph.width
+        if width in width_counts:
+            width_counts[width] += 1
+        else:
+            width_counts[width] = 1
+    if len(width_counts) < 1:
+        return 100
+    widths = list(width_counts.keys())
+    widths.sort(reverse=True, key=lambda width: width_counts[width])
+    return width_counts[widths[0]] / len(list(font.glyphs())) * 100
+
+def load_font(filename):
+    global exit_code
+    try:
+        os.close(2)
+        font = fontforge.open(filename)
+        os.dup2(stderr_fd, 2)
+        return font
+    except OSError as e:
+        exit_code = 1
+        os.dup2(stderr_fd, 2)
+        sys.stderr.write("%s: %s\n" % (filename, e))
+        return None
+
+def import_fontforge():
+    global os, stderr_fd
+    import os
+    stderr_fd = os.dup(2)
+    os.close(2)
+    import fontforge
+    os.dup2(stderr_fd, 2)
+
+import_fontforge()
+main()
