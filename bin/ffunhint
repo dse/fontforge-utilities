@@ -4,24 +4,93 @@
 import fontforge
 import sys
 import argparse
+import os
+import re
 
-parser = argparse.ArgumentParser(description = "remove hints from specified font(s)")
-parser.add_argument("filenames", nargs="+")
+def main():
+    parser = argparse.ArgumentParser(description = "remove hints from specified font(s)")
+    parser.add_argument("filenames", nargs="+")
+    args = parser.parse_args()
 
-args = parser.parse_args()
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        for glyph in font.glyphs():
+            glyph.hhints = tuple()
+            glyph.vhints = tuple()
+            glyph.manualHints = True
+            font.gasp_version = 1
+            font.gasp = ((1, ('antialias',),),)
 
-for filename in args.filenames:
-    font = fontforge.open(filename)
-    for glyph in font.glyphs():
-        glyph.hhints = tuple()
-        glyph.vhints = tuple()
-        glyph.manualHints = True
-        # del glyph.hhints
-        # del glyph.vhints
-        # del glyph.manualHints
-        font.gasp_version = 1
-        font.gasp = ((1, ('antialias',),),)
-    if filename.endswith(".sfd"):
-        font.save(filename)
-    else:
-        font.generate(filename, flags=['no-hints','no-flex'])
+        if font.cidfamilyname != None:
+            font.cidfamilyname = "NH " + font.cidfamilyname
+        if font.cidfontname != None:
+            font.cidfontname = "NH" + font.cidfontname
+        if font.cidfullname != None:
+            font.cidfullname = "NH " + font.cidfullname
+        if font.familyname != None:
+            font.familyname = "NH " + font.familyname
+        if font.fontname != None:
+            font.fontname = "NH" + font.fontname
+        if font.fullname != None:
+            font.fullname = "NH " + font.fullname
+
+        sfnt_names = list(font.sfnt_names)
+        sfnt_names = [list(sublist) for sublist in sfnt_names]
+        for sublist in sfnt_names:
+            if sublist[1] == "Family":
+                sublist[2] = font.familyname
+            elif sublist[1] == "Fullname":
+                sublist[2] = font.fullname
+            elif sublist[1] == "PostScriptName":
+                sublist[2] = font.fontname
+        font.sfnt_names = tuple([tuple(sublist) for sublist in sfnt_names
+                                 if sublist[1] != "UniqueID"])
+        print(filename)
+        for tup in font.sfnt_names:
+            print(tup)
+
+        # best practices:
+        #     filename: FontFamilyName-StyleName.ttf
+        # font name:
+        #     FontFamilyName-StyleName
+        # family name:
+        #     Font Family Name
+        # full name:
+        #     Font Family Name Style Name
+
+        # Guess a punctuation- and case-appropriate "nh" prefix to put
+        # before the filename.
+        filename = new_filename(filename)
+
+        if filename.endswith(".sfd"):
+            font.save(filename)
+        else:
+            font.generate(filename, flags=['no-hints','no-flex'])
+
+def new_filename(filename):
+    [dirname, basename] = os.path.split(filename)
+    print("%s" % dirname)
+    print("%s" % basename)
+    return os.path.join(dirname, prefix(filename) + separ(filename) + basename)
+
+def separ(filename):
+    if " " in filename:
+        return " "
+    if "_" in filename:
+        return "_"
+    if re.search(r'-.*-', filename):
+        return "-"
+    return ""
+
+def prefix(filename):
+    if not re.search(r'[A-Z]', filename):
+        return "nh"
+    if not re.search(r'[a-z]', filename):
+        return "NH"
+    if re.match(r'[^A-Za-z]+[A-Z]', filename):
+        return "NH"
+    if re.match(r'[^A-Za-z]+[a-z]', filename):
+        return "nh"
+    return "NH"
+
+main()
