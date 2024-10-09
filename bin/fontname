@@ -12,7 +12,10 @@ def main():
     global args
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-D', '--debug', action='store_true')
     args = parser.parse_args()
+    if args.debug:
+        os.environ["FFUTILS_DEBUG"] = '1'
 
     exit_code = 0
     for filename in args.filenames:
