@@ -12,9 +12,9 @@ import argparse
 def main():
     global args
     parser = argparse.ArgumentParser()
-    parser.add_argument('source_filename')
-    parser.add_argument('dest_filename', nargs = '+', default = [])
-    parser.add_argument('-n', '--dry-run', action='store_true')
+    parser.add_argument('source_filename', help = "original filename")
+    parser.add_argument('dest_filename', nargs = '+', default = [], help = "filename/format to convert to (can also be a bare extension, e.g., \".ttf\")")
+    parser.add_argument('-n', '--dry-run', action='store_true', help = "don't take actions, only print them")
     args = parser.parse_args()
 
     if args.dry_run:
