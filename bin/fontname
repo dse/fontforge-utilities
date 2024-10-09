@@ -17,19 +17,21 @@ def main():
     if args.debug:
         os.environ["FFUTILS_DEBUG"] = '1'
 
+    exe = os.path.basename(sys.argv[0])
+
     exit_code = 0
     for filename in args.filenames:
         font = ffutils.load_font(filename)
         if font is None:
             exit_code = 1
             continue
-        if os.path.basename(sys.argv[0]) == "fontname":
+        if exe == "fontname" or exe == "fontpsname" or exe == "psname":
             print("%-32s  %s" % (font.fontname, filename))
-        elif os.path.basename(sys.argv[0]) == "fontfamily":
+        elif exe == "fontfamily" or exe == "fontfamilyname" or exe == "familyname":
             print("%-32s  %s" % (font.familyname, filename))
-        elif os.path.basename(sys.argv[0]) == "fontfull":
+        elif exe == "fontfull" or exe == "fontfullname" or exe == "fullname":
             print("%-48s  %s" % (font.fullname, filename))
-        elif os.path.basename(sys.argv[0]) == "fontweight":
+        elif exe == "fontweight" or exe == "fontweightname" or exe == "weightname":
             print("%-32s  %s" % (font.weight, filename))
         else:
             print("%-32s  %s" % (font.fontname, filename))
