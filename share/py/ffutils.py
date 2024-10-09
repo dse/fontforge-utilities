@@ -6,7 +6,8 @@ stderr_fd = None
 def import_fontforge():
     global stderr_fd, fontforge
     if not os.environ.get("FFUTILS_DEBUG"):
-        stderr_fd = os.dup(2)
+        if stderr_fd == None:
+            stderr_fd = os.dup(2)
         os.close(2)
     import fontforge
     if not os.environ.get("FFUTILS_DEBUG"):
