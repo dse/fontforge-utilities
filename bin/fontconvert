@@ -11,7 +11,7 @@ import argparse
 
 def main():
     global args
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="convert fonts from one format to another")
     parser.add_argument('source_filename', help = "original filename")
     parser.add_argument('dest_filename', nargs = '+', default = [], help = "filename/format to convert to (can also be a bare extension, e.g., \".ttf\")")
     parser.add_argument('-n', '--dry-run', action='store_true', help = "don't take actions, only print them")

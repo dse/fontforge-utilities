@@ -31,12 +31,12 @@ output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
 
 def main():
     global args
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="detect monospace fonts")
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-q', '--quiet',   nargs=0, action=QuietAction)
-    parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction)
-    parser.add_argument('-m', '--mostly',  action='store_true')
-    parser.add_argument('-p', '--panose',  action='store_true')
+    parser.add_argument('-q', '--quiet',   nargs=0, action=QuietAction, help="less output (can be specified multiple times)")
+    parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction, help="more output (can be specified multiple times)")
+    parser.add_argument('-m', '--mostly',  action='store_true', help="flag as monospace if most glyphs are the same width (all glyphs must be same width by default)")
+    parser.add_argument('-p', '--panose',  action='store_true', help="allow incorrect panose flag")
     args = parser.parse_args()
 
     exit_code = 0
