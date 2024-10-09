@@ -1,0 +1,46 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
+
+import re
+import ffutils
+import argparse
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source_filename')
+    parser.add_argument('dest_filename', nargs = '*', default = [])
+    parser.add_argument('-n', '--dry-run', action='store_true')
+    args = parser.parse_args()
+
+    if args.dry_run:
+        print("load %s" % args.source_filename)
+    else:
+        print("Loading %s" % args.source_filename)
+        font = ffutils.load_font(args.source_filename)
+        if font is None:
+            exit(1)
+    (source_base, source_ext) = os.path.splitext(args.source_filename)
+    for dest_filename in args.dest_filename:
+        if re.search(r'^\.[A-Za-z0-9]+$', dest_filename):
+            dest_filename = source_base + dest_filename
+        (base, ext) = os.path.splitext(dest_filename)
+        if ext == '.sfd':
+            if args.dry_run:
+                print("save (as sfd) %s" % dest_filename)
+            else:
+                print("Saving %s" % dest_filename)
+                font.save(dest_filename)
+        else:
+            if args.dry_run:
+                print("generate (convert to) %s" % dest_filename)
+            else:
+                print("Generating %s" % dest_filename)
+                font.generate(dest_filename)
+
+ffutils.import_fontforge()
+main()
