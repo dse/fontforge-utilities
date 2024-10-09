@@ -50,7 +50,7 @@ def main():
 def fontismono(filename, font):
     global quiet_level, verbose_level, output_level
     global is_quiet, is_verbose, args, exit_code
-    (percentage, mono_count, glyph_count) = top_glyph_width_percentage(font)
+    (percentage, mono_count, glyph_count, top_width) = top_glyph_width_percentage(font)
     is_mono = (percentage == 100) or (args.mostly and percentage >= 95)
     is_panose = font.os2_panose[3] == 9
     if not args.panose:
@@ -70,6 +70,12 @@ def fontismono(filename, font):
                 print("%6.2f%% (%4d/%4d)  N  %s" % (percentage, mono_count, glyph_count, filename))
             else:
                 print("%6.2f%%  N  %s" % (percentage, filename))
+    if verbose_level >= 2:
+        for glyph in font.glyphs():
+            if not glyph.width == top_width:
+                print("    %-8s  %4d  %s" % (ffutils.u(glyph.unicode),
+                                             glyph.width,
+                                             glyph.glyphname))
     if is_verbose:
         if not is_panose:
             print("    fourth value of panose tuple is %d; expected %d" %
@@ -89,7 +95,8 @@ def top_glyph_width_percentage(font):
     widths.sort(reverse=True, key=lambda width: width_counts[width])
     return (width_counts[widths[0]] / len(list(font.glyphs())) * 100,
             width_counts[widths[0]],
-            len(list(font.glyphs())))
+            len(list(font.glyphs())),
+            widths[0])
 
 ffutils.import_fontforge()
 main()

@@ -26,3 +26,8 @@ def load_font(filename):
             os.dup2(stderr_fd, 2)
         sys.stderr.write("%s: %s\n" % (filename, e))
         return None
+
+def u(codepoint):
+    if codepoint < 0:
+        return "%-8d" % codepoint
+    return "U+%04X" % codepoint
