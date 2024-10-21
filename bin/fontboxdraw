@@ -1,0 +1,355 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
+
+import ffutils
+import argparse
+
+# https://spencermortensen.com/articles/bezier-circle/
+C = 0.5519150244935105707435627
+
+def main():
+    global args
+    parser = argparse.ArgumentParser(description="add box drawing characters to a font")
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument("-n", "--dry-run", action="store_true", help="make no changes")
+    parser.add_argument("-f", "--force", action="store_true", help="replace any already-added glyphs")
+    parser.add_argument("-w", "--width", type=int, help="width of braille characters in em units")
+    parser.add_argument("-W", "--line-width", type=int, help="width of lines in em units")
+    args = parser.parse_args()
+    rounded = False
+    for filename in args.filenames:
+        font = ffutils.load_font(filename)
+        if font.is_quadratic:
+            print("%s: font is quadratic; skipping" % filename)
+            continue
+        if font is None:
+            print("%s: not a font" % filename)
+            continue
+        if (not ffutils.font_is_mono(font)) and args.width is None:
+            print("%s: is not monospace; must specify --width" % filename)
+            continue
+        if (args.width is not None):
+            width = args.width
+        else:
+            width = ffutils.top_glyph_width_percentage(font)[3]
+            print("%s: glyph width will be %d" % (filename, width))
+        if (args.line_width is not None):
+            line_width = args.line_width
+        else:
+            line_width = min(font.em / 20, width / 10)
+        heavy = 2
+        for codepoint in range(0x2500, 0x257f):
+            if codepoint in font:
+                if args.force:
+                    font.removeGlyph(codepoint)
+                else:
+                    print("%s: U+%04X already exists" % (filename, codepoint))
+                    continue
+            print("%s: creating glyph for U+%04X" % (filename, codepoint))
+            glyph = font.createChar(codepoint)
+            pen = glyph.glyphPen()
+            glyph.width = width
+            yc = round(font.capHeight / 2)
+            lw = round(line_width / 2)
+            xc = glyph.width / 2
+            if codepoint == 0x2500: # horizontal
+                rect(font, glyph, pen, 0, width, yc - lw, yc + lw)
+            elif codepoint == 0x2501:
+                rect(font, glyph, pen, 0, width, yc - lw * heavy, yc + lw * heavy)
+            elif codepoint == 0x2502: # vertical
+                rect(font, glyph, pen, xc - lw, xc + lw, -font.descent, font.ascent)
+            elif codepoint == 0x2503:
+                rect(font, glyph, pen, xc - lw * heavy, xc + lw * heavy, -font.descent, font.ascent)
+            elif codepoint == 0x2504: # triple dash
+                dx = round(width * 1/12)
+                x1 = round(width * 1/6) - dx
+                x2 = round(width * 1/6) + dx
+                x3 = round(width * 3/6) - dx
+                x4 = round(width * 3/6) + dx
+                x5 = round(width * 5/6) - dx
+                x6 = round(width * 5/6) + dx
+                rect(font, glyph, pen, x1, x2, yc - lw, yc + lw)
+                rect(font, glyph, pen, x3, x4, yc - lw, yc + lw)
+                rect(font, glyph, pen, x5, x6, yc - lw, yc + lw)
+            elif codepoint == 0x2505:
+                dx = round(width * 1/12)
+                x1 = round(width * 1/6) - dx
+                x2 = round(width * 1/6) + dx
+                x3 = round(width * 3/6) - dx
+                x4 = round(width * 3/6) + dx
+                x5 = round(width * 5/6) - dx
+                x6 = round(width * 5/6) + dx
+                rect(font, glyph, pen, x1, x2, yc - lw * heavy, yc + lw * heavy)
+                rect(font, glyph, pen, x3, x4, yc - lw * heavy, yc + lw * heavy)
+                rect(font, glyph, pen, x5, x6, yc - lw * heavy, yc + lw * heavy)
+            elif codepoint == 0x2506:
+                dy = round(font.em * 1/12)
+                y1 = round(-font.descent + font.em * 1/6) - dy
+                y2 = round(-font.descent + font.em * 1/6) + dy
+                y3 = round(-font.descent + font.em * 3/6) - dy
+                y4 = round(-font.descent + font.em * 3/6) + dy
+                y5 = round(-font.descent + font.em * 5/6) - dy
+                y6 = round(-font.descent + font.em * 5/6) + dy
+                rect(font, glyph, pen, xc - lw, xc + lw, y1, y2)
+                rect(font, glyph, pen, xc - lw, xc + lw, y3, y4)
+                rect(font, glyph, pen, xc - lw, xc + lw, y5, y6)
+            elif codepoint == 0x2507:
+                dy = round(font.em * 1/12)
+                y1 = round(-font.descent + font.em * 1/6) - dy
+                y2 = round(-font.descent + font.em * 1/6) + dy
+                y3 = round(-font.descent + font.em * 3/6) - dy
+                y4 = round(-font.descent + font.em * 3/6) + dy
+                y5 = round(-font.descent + font.em * 5/6) - dy
+                y6 = round(-font.descent + font.em * 5/6) + dy
+                rect(font, glyph, pen, xc - lw * heavy, xc + lw * heavy, y1, y2)
+                rect(font, glyph, pen, xc - lw * heavy, xc + lw * heavy, y3, y4)
+                rect(font, glyph, pen, xc - lw * heavy, xc + lw * heavy, y5, y6)
+            elif codepoint == 0x2508:
+                dx = round(width * 1/16)
+                y1 = yc - lw
+                y2 = yc + lw
+                for frac in [1/8, 3/8, 5/8, 7/8]:
+                    x1 = round(width * frac) - dx
+                    x2 = round(width * frac) + dx
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+            elif codepoint == 0x2509:
+                dx = round(width * 1/16)
+                y1 = yc - lw * heavy
+                y2 = yc + lw * heavy
+                for frac in [1/8, 3/8, 5/8, 7/8]:
+                    x1 = round(width * frac) - dx
+                    x2 = round(width * frac) + dx
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+            elif codepoint == 0x250a:
+                dy = round(font.em * 1/16)
+                x1 = xc - lw
+                x2 = xc + lw
+                for frac in [1/8, 3/8, 5/8, 7/8]:
+                    y1 = round(-font.descent + font.em * frac) - dy
+                    y2 = round(-font.descent + font.em * frac) + dy
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+            elif codepoint == 0x250b:
+                dy = round(font.em * 1/16)
+                x1 = xc - lw * heavy
+                x2 = xc + lw * heavy
+                for frac in [1/8, 3/8, 5/8, 7/8]:
+                    y1 = round(-font.descent + font.em * frac) - dy
+                    y2 = round(-font.descent + font.em * frac) + dy
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+            elif codepoint in range(0x250c, 0x2510):
+                xw = (2 if codepoint & 2 == 2 else 1) * lw
+                yw = (2 if codepoint & 1 == 1 else 1) * lw
+                pen.moveTo((xc - xw, yc + yw))
+                pen.lineTo((width, yc + yw))
+                pen.lineTo((width, yc - yw))
+                pen.lineTo((xc + xw, yc - yw))
+                pen.lineTo((xc + xw, -font.descent))
+                pen.lineTo((xc - xw, -font.descent))
+                pen.lineTo((xc - xw, yc + yw))
+                pen.closePath()
+            elif codepoint in range(0x2510, 0x2514):
+                xw = (2 if codepoint & 2 == 2 else 1) * lw
+                yw = (2 if codepoint & 1 == 1 else 1) * lw
+                pen.moveTo((xc + xw, yc + yw))
+                pen.lineTo((0, yc + yw))
+                pen.lineTo((0, yc - yw))
+                pen.lineTo((xc - xw, yc - yw))
+                pen.lineTo((xc - xw, -font.descent))
+                pen.lineTo((xc + xw, -font.descent))
+                pen.lineTo((xc + xw, yc + yw))
+                pen.closePath()
+            elif codepoint in range(0x2514, 0x2518):
+                xw = (2 if codepoint & 2 == 2 else 1) * lw
+                yw = (2 if codepoint & 1 == 1 else 1) * lw
+                pen.moveTo((xc - xw, yc - yw))
+                pen.lineTo((width, yc - yw))
+                pen.lineTo((width, yc + yw))
+                pen.lineTo((xc + xw, yc + yw))
+                pen.lineTo((xc + xw, font.ascent))
+                pen.lineTo((xc - xw, font.ascent))
+                pen.lineTo((xc - xw, yc - yw))
+                pen.closePath()
+            elif codepoint in range(0x2518, 0x251c):
+                xw = (2 if codepoint & 2 == 2 else 1) * lw
+                yw = (2 if codepoint & 1 == 1 else 1) * lw
+                pen.moveTo((xc + xw, yc - yw))
+                pen.lineTo((0, yc - yw))
+                pen.lineTo((0, yc + yw))
+                pen.lineTo((xc - xw, yc + yw))
+                pen.lineTo((xc - xw, font.ascent))
+                pen.lineTo((xc + xw, font.ascent))
+                pen.lineTo((xc + xw, yc - yw))
+                pen.closePath()
+            elif codepoint in range(0x251c, 0x2524):
+                lw_t = lw
+                lw_r = lw
+                lw_b = lw
+                if (codepoint - 0x251c) in [2, 4, 5, 7]:
+                    lw_t *= heavy
+                if (codepoint - 0x251c) in [1, 5, 6, 7]:
+                    lw_r *= heavy
+                if (codepoint - 0x251c) in [3, 4, 6, 7]:
+                    lw_b *= heavy
+                pen.moveTo((xc - lw_t, font.ascent))
+                pen.lineTo((xc + lw_t, font.ascent))
+                pen.lineTo((xc + lw_t, yc + lw_r))
+                pen.lineTo((width, yc + lw_r))
+                pen.lineTo((width, yc - lw_r))
+                pen.lineTo((xc + lw_b, yc - lw_r))
+                pen.lineTo((xc + lw_b, -font.descent))
+                pen.lineTo((xc - lw_b, -font.descent))
+                if lw_b < lw_t:
+                    pen.lineTo((xc - lw_b, yc - lw_r))
+                    pen.lineTo((xc - lw_t, yc - lw_r))
+                elif lw_b > lw_t:
+                    pen.lineTo((xc - lw_b, yc + lw_r))
+                    pen.lineTo((xc - lw_t, yc + lw_r))
+                pen.lineTo((xc - lw_t, font.ascent))
+                pen.closePath()
+            elif codepoint in range(0x2524, 0x252c):
+                lw_t = lw
+                lw_l = lw
+                lw_b = lw
+                if (codepoint - 0x2524) in [2, 4, 5, 7]:
+                    lw_t *= heavy
+                if (codepoint - 0x2524) in [1, 5, 6, 7]:
+                    lw_l *= heavy
+                if (codepoint - 0x2524) in [3, 4, 6, 7]:
+                    lw_b *= heavy
+                pen.moveTo((xc + lw_t, font.ascent))
+                pen.lineTo((xc - lw_t, font.ascent))
+                pen.lineTo((xc - lw_t, yc + lw_l))
+                pen.lineTo((0, yc + lw_l))
+                pen.lineTo((0, yc - lw_l))
+                pen.lineTo((xc - lw_b, yc - lw_l))
+                pen.lineTo((xc - lw_b, -font.descent))
+                pen.lineTo((xc + lw_b, -font.descent))
+                if lw_b < lw_t:
+                    pen.lineTo((xc + lw_b, yc - lw_l))
+                    pen.lineTo((xc + lw_t, yc - lw_l))
+                elif lw_b > lw_t:
+                    pen.lineTo((xc + lw_b, yc + lw_l))
+                    pen.lineTo((xc + lw_t, yc + lw_l))
+                pen.lineTo((xc + lw_t, font.ascent))
+                pen.closePath()
+            elif codepoint in range(0x252c, 0x2534):
+                lw_b = lw
+                lw_l = lw
+                lw_r = lw
+                if (codepoint - 0x252c) in [4, 5, 6, 7]:
+                    lw_b *= heavy
+                if (codepoint - 0x252c) in [1, 3, 5, 7]:
+                    lw_l *= heavy
+                if (codepoint - 0x252c) in [2, 3, 6, 7]:
+                    lw_r *= heavy
+                pen.moveTo((0, yc + lw_l))
+                if lw_l < lw_r:
+                    pen.lineTo((xc - lw_b, yc + lw_l))
+                    pen.lineTo((xc - lw_b, yc + lw_r))
+                elif lw_l > lw_r:
+                    pen.lineTo((xc + lw_b, yc + lw_l))
+                    pen.lineTo((xc + lw_b, yc + lw_r))
+                pen.lineTo((width, yc + lw_r))
+                pen.lineTo((width, yc - lw_r))
+                pen.lineTo((xc + lw_b, yc - lw_r))
+                pen.lineTo((xc + lw_b, -font.descent))
+                pen.lineTo((xc - lw_b, -font.descent))
+                pen.lineTo((xc - lw_b, yc - lw_l))
+                pen.lineTo((0, yc - lw_l))
+                pen.lineTo((0, yc + lw_l))
+                pen.closePath()
+            elif codepoint in range(0x2534, 0x253c):
+                lw_t = lw
+                lw_l = lw
+                lw_r = lw
+                if (codepoint - 0x2534) in [4, 5, 6, 7]:
+                    lw_t *= heavy
+                if (codepoint - 0x2534) in [1, 3, 5, 7]:
+                    lw_l *= heavy
+                if (codepoint - 0x2534) in [2, 3, 6, 7]:
+                    lw_r *= heavy
+                pen.moveTo((0, yc - lw_l))
+                if lw_l < lw_r:
+                    pen.lineTo((xc - lw_t, yc - lw_l))
+                    pen.lineTo((xc - lw_t, yc - lw_r))
+                elif lw_l > lw_r:
+                    pen.lineTo((xc + lw_t, yc - lw_l))
+                    pen.lineTo((xc + lw_t, yc - lw_r))
+                pen.lineTo((width, yc - lw_r))
+                pen.lineTo((width, yc + lw_r))
+                pen.lineTo((xc + lw_t, yc + lw_r))
+                pen.lineTo((xc + lw_t, font.ascent))
+                pen.lineTo((xc - lw_t, font.ascent))
+                pen.lineTo((xc - lw_t, yc + lw_l))
+                pen.lineTo((0, yc + lw_l))
+                pen.lineTo((0, yc - lw_l))
+                pen.closePath()
+            elif codepoint in range(0x253c, 0x254c):
+                lw_t = lw
+                lw_r = lw
+                lw_b = lw
+                lw_l = lw
+                if (codepoint - 0x253c) in [1, 3, 7, 9, 11, 12, 13, 15]:
+                    lw_l *= heavy
+                if (codepoint - 0x253c) in [2, 3, 8, 10, 11, 12, 14, 15]:
+                    lw_r *= heavy
+                if (codepoint - 0x253c) in [4, 6, 7, 8, 11, 13, 14, 15]:
+                    lw_t *= heavy
+                if (codepoint - 0x253c) in [5, 6, 9, 10, 12, 13, 14, 15]:
+                    lw_b *= heavy
+                pen.moveTo((xc - lw_t, font.ascent))
+                pen.lineTo((xc + lw_t, font.ascent))
+                pen.lineTo((xc + lw_t, yc + lw_r))
+                pen.lineTo((width, yc + lw_r))
+                pen.lineTo((width, yc - lw_r))
+                pen.lineTo((xc + lw_b, yc - lw_r))
+                pen.lineTo((xc + lw_b, -font.descent))
+                pen.lineTo((xc - lw_b, -font.descent))
+                pen.lineTo((xc - lw_b, yc - lw_l))
+                pen.lineTo((0, yc - lw_l))
+                pen.lineTo((0, yc + lw_l))
+                pen.lineTo((xc - lw_t, yc + lw_l))
+                pen.lineTo((xc - lw_t, font.ascent))
+                pen.closePath()
+            elif codepoint == 0x254c or codepoint == 0x254d:
+                w = heavy if codepoint - 0x254c == 1 else 1
+                dx = round(width * 1/8)
+                y1 = yc - lw * w
+                y2 = yc + lw * w
+                for frac in [1/4, 3/4]:
+                    x1 = round(width * frac) - dx
+                    x2 = round(width * frac) + dx
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+            elif codepoint == 0x254e or codepoint == 0x254f:
+                w = heavy if codepoint - 0x254e == 1 else 1
+                x1 = xc - lw * w
+                x2 = xc + lw * w
+                dy = round(font.em * 1/8)
+                for frac in [1/4, 3/4]:
+                    y1 = round(-font.descent + font.em * frac) - dy
+                    y2 = round(-font.descent + font.em * frac) + dy
+                    rect(font, glyph, pen, x1, x2, y1, y2)
+                
+            glyph.width = width
+            print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
+
+    (source_base, source_ext) = os.path.splitext(filename)
+    if source_ext == ".sfd":
+        font.save(filename)
+    else:
+        font.generate(filename)
+
+def rect(font, glyph, pen, x1, x2, y1, y2):
+    pen.moveTo((x1, y1))
+    pen.lineTo((x1, y2))
+    pen.lineTo((x2, y2))
+    pen.lineTo((x2, y1))
+    pen.lineTo((x1, y1))
+    pen.closePath()
+
+ffutils.import_fontforge()
+main()
