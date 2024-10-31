@@ -4,6 +4,7 @@
 import os
 import fontforge
 import argparse
+import unicodedata
 
 def main():
     global args
@@ -15,11 +16,16 @@ def main():
         font = fontforge.open(filename)
         print("%s:" % filename)
         for glyph in font.glyphs():
-            print("    %5d | %-8s | %s" % (glyph.width, u(glyph.unicode), glyph.glyphname))
+            print("    %5d | %-8s | %-32s | %s" % (glyph.width, u(glyph.unicode), glyph.glyphname, name(glyph.unicode)))
 
 def u(codepoint):
     if codepoint < 0:
         return "%d" % codepoint
     return "U+%04X" % codepoint
+
+def name(codepoint):
+    if codepoint < 0:
+        return "-"
+    return unicodedata.name(chr(codepoint), "-")
 
 main()
