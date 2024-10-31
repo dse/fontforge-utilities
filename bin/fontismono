@@ -98,5 +98,28 @@ def top_glyph_width_percentage(font):
             len(list(font.glyphs())),
             widths[0])
 
+def fc_font_is_mono(font):
+    advances = []
+    for glyph in font.glyphs():
+        advance_is_new = true
+        advance = glyph.width
+        if advance == 0:
+            continue
+        for existing_advance in advances:
+            if fc_approximately_equal(advance, existing_advance):
+                advance_is_new = false
+                break
+        if advance_is_new:
+            advances.push(advance)
+            if len(advances) > 2:
+                break
+    return (len(advances) == 1 or
+            (len(advances) == and
+             fc_approximately_equal(max(advances[0], advances[1]),
+                                    min(advances[0], advances[1]) * 2)))
+
+def fc_approximately_equal(x, y):
+    return abs(x - y) * 33 <= max(abs(x), abs(y))
+
 ffutils.import_fontforge()
 main()
