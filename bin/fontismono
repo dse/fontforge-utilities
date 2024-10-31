@@ -2,10 +2,7 @@
 # -*- mode: python; coding: utf-8 -*-
 
 import os
-import sys
-sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
-
-import ffutils
+import fontforge
 import argparse
 
 verbose_level = 0
@@ -29,59 +26,23 @@ class QuietAction(argparse.Action):
 
 def main():
     global args
-    parser = argparse.ArgumentParser(description="detect monospace fonts")
+    parser = argparse.ArgumentParser(description='will your font(s) be detected as monospace?')
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-q', '--quiet',   nargs=0, action=QuietAction, help="less output (can be specified multiple times)")
-    parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction, help="more output (can be specified multiple times)")
-    parser.add_argument('-m', '--mostly',  action='store_true', help="flag as monospace if most glyphs are the same width (all glyphs must be same width by default)")
-    parser.add_argument('-p', '--panose',  action='store_true', help="allow incorrect panose flag")
+    parser.add_argument('-v', '--verbose', action=VerboseAction, help='more output, can be repeated')
     args = parser.parse_args()
 
     output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
-
     exit_code = 0
     for filename in args.filenames:
-        font = ffutils.load_font(filename)
-        if font is None:
+        if not check_if_font_is_mono(filename):
             exit_code = 1
-            continue
-        fontismono(filename, font)
 
-def fontismono(filename, font):
-    global quiet_level, verbose_level, output_level
-    global is_quiet, is_verbose, args, exit_code
-    (percentage, mono_count, glyph_count, top_width) = top_glyph_width_percentage(font)
-    is_mono = (percentage == 100) or (args.mostly and percentage >= 95)
-    is_panose = font.os2_panose[3] == 9
-    if not args.panose:
-        is_mono = is_mono and is_panose
-    if is_mono:
-        if is_quiet:
-            print(filename)
-        else:
-            if verbose_level >= 1:
-                print("%6.2f%% (%4d/%4d)  Y  %s" % (percentage, mono_count, glyph_count, filename))
-            else:
-                print("%6.2f%%  Y  %s" % (percentage, filename))
-    else:
-        exit_code = 1
-        if not is_quiet:
-            if verbose_level >= 1:
-                print("%6.2f%% (%4d/%4d)  N  %s" % (percentage, mono_count, glyph_count, filename))
-            else:
-                print("%6.2f%%  N  %s" % (percentage, filename))
-    if verbose_level >= 2:
-        for glyph in font.glyphs():
-            if not glyph.width == top_width:
-                print("    %-8s  %4d  %s" % (ffutils.u(glyph.unicode),
-                                             glyph.width,
-                                             glyph.glyphname))
-    if is_verbose:
-        if not is_panose:
-            print("    fourth value of panose tuple is %d; expected %d" %
-                  (font.os2_panose[3], 9))
-
-def top_glyph_width_percentage(font):
+def check_if_font_is_mono(filename):
+    demerits = []
+    caveats = []
+    font = fontforge.open(filename)
+    if font.os2_panose[3] != 9:
+        demerits.append("incorrect value for fourth panose param (should be 9), so not monospace")
     width_counts = {}
     for glyph in font.glyphs():
         width = glyph.width
@@ -90,36 +51,42 @@ def top_glyph_width_percentage(font):
         else:
             width_counts[width] = 1
     if len(width_counts) < 1:
-        return 100
-    widths = list(width_counts.keys())
-    widths.sort(reverse=True, key=lambda width: width_counts[width])
-    return (width_counts[widths[0]] / len(list(font.glyphs())) * 100,
-            width_counts[widths[0]],
-            len(list(font.glyphs())),
-            widths[0])
+        demerits.append("no glyphs, so not monospace")
+    if len(width_counts) == 1:
+        pass                    # :-)
+    elif fc_check_if_font_is_mono(font):
+        caveats.append("glyph widths may vary slightly or font is FC_DUAL")
+    else:
+        demerits.append("glyph widths not unique, so not monospace")
+    if len(demerits):
+        for demerit in demerits:
+            print("%s: DEMERIT - %s" % (filename, demerit))
+    if len(caveats):
+        for caveat in caveats:
+            print("%s: CAVEAT - %s" % (filename, caveat))
+    return len(demerits) == 0
 
-def fc_font_is_mono(font):
+def fc_check_if_font_is_mono(font):
     advances = []
     for glyph in font.glyphs():
-        advance_is_new = true
+        advance_is_new = True
         advance = glyph.width
         if advance == 0:
             continue
         for existing_advance in advances:
             if fc_approximately_equal(advance, existing_advance):
-                advance_is_new = false
+                advance_is_new = False
                 break
         if advance_is_new:
-            advances.push(advance)
+            advances.append(advance)
             if len(advances) > 2:
                 break
     return (len(advances) == 1 or
-            (len(advances) == and
+            (len(advances) == 2 and
              fc_approximately_equal(max(advances[0], advances[1]),
                                     min(advances[0], advances[1]) * 2)))
 
 def fc_approximately_equal(x, y):
     return abs(x - y) * 33 <= max(abs(x), abs(y))
 
-ffutils.import_fontforge()
 main()
