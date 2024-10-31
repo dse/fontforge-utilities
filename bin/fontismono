@@ -27,8 +27,6 @@ class QuietAction(argparse.Action):
         is_verbose = False
         is_quiet = True
 
-output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
-
 def main():
     global args
     parser = argparse.ArgumentParser(description="detect monospace fonts")
@@ -38,6 +36,8 @@ def main():
     parser.add_argument('-m', '--mostly',  action='store_true', help="flag as monospace if most glyphs are the same width (all glyphs must be same width by default)")
     parser.add_argument('-p', '--panose',  action='store_true', help="allow incorrect panose flag")
     args = parser.parse_args()
+
+    output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
 
     exit_code = 0
     for filename in args.filenames:
