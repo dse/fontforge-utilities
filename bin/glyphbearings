@@ -1,0 +1,51 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import fontforge
+import argparse
+import unicodedata
+from functools import cmp_to_key
+
+def main():
+    global args
+    parser = argparse.ArgumentParser(description='list glyphs and widths')
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        print("%s:" % filename)
+        glyphs = list(font.glyphs())
+        glyphs.sort(key=cmp_to_key(cmp_glyphs))
+        for glyph in glyphs:
+            print("    %5d | %5d | %-24s | %-8s %s" % (
+                glyph.left_side_bearing, glyph.right_side_bearing, glyph.glyphname, u(glyph.unicode), name(glyph.unicode)
+            ))
+
+def u(codepoint):
+    if codepoint < 0:
+        return "%d" % codepoint
+    return "U+%04X" % codepoint
+
+def name(codepoint):
+    if codepoint < 0:
+        return "-"
+    return unicodedata.name(chr(codepoint), "-")
+
+def cmp_glyphs(a, b):
+    if a.unicode < 0 and b.unicode >= 0:
+        return 1
+    if b.unicode < 0 and a.unicode >= 0:
+        return -1
+    if a.unicode < b.unicode:
+        return -1
+    if a.unicode > b.unicode:
+        return 1
+    if a.encoding < b.encoding:
+        return -1
+    if a.encoding > b.encoding:
+        return 1
+    return 0
+
+main()
