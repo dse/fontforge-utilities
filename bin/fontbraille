@@ -1,6 +1,7 @@
 #!/usr/bin/env fontforge
 # -*- mode: python; coding: utf-8 -*-
 
+import fontforge
 import os
 import sys
 sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
@@ -15,19 +16,14 @@ def main():
     global args
     parser = argparse.ArgumentParser(description="add braille characters to a font")
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument("-n", "--dry-run", action="store_true", help="make no changes")
-    parser.add_argument("-f", "--force", action="store_true", help="replace any already-added glyphs")
-    parser.add_argument("-w", "--width", type=int, help="width of braille characters in em units")
+    parser.add_argument("-n", "--dry-run",   action="store_true", help="make no changes")
+    parser.add_argument("-f", "--force",     action="store_true", help="replace any already-added glyphs")
+    parser.add_argument("-w", "--width",     type=int, help="width of braille characters in em units")
     parser.add_argument("-W", "--dot-width", type=int, help="width of dots in em units")
     args = parser.parse_args()
     for filename in args.filenames:
-        font = ffutils.load_font(filename)
-        if font.is_quadratic:
-            print("%s: font is quadratic; skipping" % filename)
-            continue
-        if font is None:
-            print("%s: not a font" % filename)
-            continue
+        print(filename)
+        font = fontforge.open(filename, ('fstypepermitted',))
         if (not ffutils.font_is_mono(font)) and args.width is None:
             print("%s: is not monospace; must specify --width" % filename)
             continue
@@ -41,12 +37,18 @@ def main():
         else:
             dot_width = min(font.em / 12, width / 6)
         r = round(dot_width / 2)
-        col_1 = round(width * 5/18)
-        col_2 = round(width * 13/18)
-        row_1 = round(font.em * 15/18 - font.descent)
-        row_2 = round(font.em * 11/18 - font.descent)
-        row_3 = round(font.em *  7/18 - font.descent)
-        row_4 = round(font.em *  3/18 - font.descent)
+        dist = min(
+            round(font.em * 4 / 18),
+            round(width * 8 / 18),
+        )
+
+        yc = round((font.ascent - font.descent) / 2)
+        col_1 = round(width / 2) - round(dist / 2)
+        col_2 = round(width / 2) + round(dist / 2)
+        row_1 = round(yc) + round(dist / 2) * 3
+        row_2 = round(yc) + round(dist / 2)
+        row_3 = round(yc) - round(dist / 2)
+        row_4 = round(yc) - round(dist / 2) * 3
         bit_map = [
             [col_1, row_1],     # dot 1 = bit 0
             [col_1, row_2],     # dot 2
@@ -85,5 +87,4 @@ def main():
     else:
         font.generate(filename)
 
-ffutils.import_fontforge()
 main()
