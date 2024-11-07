@@ -1,0 +1,60 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+import fontforge
+import argparse
+import unicodedata
+import re
+
+def main():
+    global args
+    parser = argparse.ArgumentParser(description="list glyphs in a font")
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-d', '--decimal', dest='base', default=10, const=10, action='store_const')
+    parser.add_argument('-x', '--hexadecimal', dest='base', const=16, action='store_const')
+    parser.add_argument('-u', '--unicode', dest='base', const='U', action='store_const')
+    parser.add_argument('-U', '--names', '--unicode-names', action='store_true')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("=== %s ===" % filename)
+        font = fontforge.open(filename)
+        for glyph in font.glyphs():
+            if args.base == 'U':
+                print("%-8s" % u(glyph.unicode), end='')
+            elif args.base == 16:
+                print("%8s" % x(glyph.unicode), end='')
+            elif args.base == 10:
+                print("%8s" % glyph.unicode, end='')
+            print("  %-32s" % glyph.glyphname, end='')
+            if args.names:
+                codepoint = glyph.unicode
+                if codepoint < 0:
+                    name = glyph.glyphname
+                    name = re.sub(r'(?<=.)\..*$', '', name)
+                    new_codepoint = fontforge.unicodeFromName(name)
+                    if new_codepoint >= 0:
+                        codepoint = new_codepoint
+                if codepoint >= 0:
+                    if args.base == 'U':
+                        print("  %-8s" % u(codepoint), end='')
+                    elif args.base == 16:
+                        print("  %8s" % x(codepoint), end='')
+                    elif args.base == 10:
+                        print("  %8s" % codepoint, end='')
+                else:
+                    print("%-10s" % "", end='')
+                if codepoint >= 0:
+                    print("  " + unicodedata.name(chr(codepoint)), end='')
+            print("")
+
+def u(codepoint):
+    if codepoint < 0:
+        return "%d" % codepoint # don't print -1 as hex
+    return "U+%04X" % codepoint
+
+def x(codepoint):
+    if codepoint < 0:
+        return "%d" % codepoint # don't print -1 as hex
+    return "0x%04x" % codepoint
+
+main()
