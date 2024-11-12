@@ -6,6 +6,11 @@ import fontforge
 import argparse
 import json
 import unicodeblocks
+# note to self -- on ubuntu systems:
+#     edit ~/.venv/pyvenv.cfg to set:
+#         include-system-site-packages = true
+#     then run:
+#         sudo apt-get -y install python3-unicodeblocks
 
 def main():
     global args
