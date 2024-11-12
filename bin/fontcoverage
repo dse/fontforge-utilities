@@ -20,37 +20,11 @@ def main():
         if len(args.filenames) > 1:
             print("%s:" % filename)
         font = fontforge.open(filename)
-        wgl4_coverage = [codepoint for codepoint in WGL4 if codepoint in font]
-        print("    %6d of %6d = %6.2f%%                    Windows Glyph List 4" % (
-            len(wgl4_coverage),
-            len(WGL4),
-            len(wgl4_coverage) / len(WGL4) * 100
-        ))
-        cp437_coverage = [codepoint for codepoint in CP437 if codepoint in font]
-        print("    %6d of %6d = %6.2f%%                    Code Page 437" % (
-            len(cp437_coverage),
-            len(CP437),
-            len(cp437_coverage) / len(CP437) * 100
-        ))
-        aglfn_coverage = [codepoint for codepoint in AGLFN if codepoint in font]
-        print("    %6d of %6d = %6.2f%%                    Adobe Glyph List for New Fonts" % (
-            len(aglfn_coverage),
-            len(AGLFN),
-            len(aglfn_coverage) / len(AGLFN) * 100
-        ))
+        print_coverage(font, WGL4, "Windows Glyph List 4")
+        print_coverage(font, CP437, "Code Page 437")
+        print_coverage(font, AGLFN, "Adobe Glyph List for New Fonts")
         for block in unicodeblocks.blocks.values():
-            coverage = 0
-            for codepoint in range(block.start, block.end + 1):
-                if codepoint in font and font[codepoint].unicode == codepoint:
-                    coverage += 1
-            if coverage > 0:
-                print("    %6d of %6d = %6.2f%%  %-8s %-8s %s" % (
-                    coverage, len(block),
-                    coverage / len(block) * 100,
-                    u(block.start),
-                    u(block.end),
-                    block.name
-                ))
+            print_coverage(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
 
 WGL4 = [ 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
          0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
@@ -249,5 +223,17 @@ def u(codepoint):
     if codepoint < 0:
         return "%d" % codepoint
     return "U+%04X" % codepoint
+
+def print_coverage(font, codepoint_list, name, start='', end=''):
+    coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
+    if len(coverage) > 0:
+        print("    %6d of %6d = %6.2f%%  %-8s  %-8s  %s" % (
+            len(coverage),
+            len(codepoint_list),
+            len(coverage) / len(codepoint_list) * 100,
+            start,
+            end,
+            name
+        ))
 
 main()
