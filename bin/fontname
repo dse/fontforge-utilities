@@ -5,7 +5,6 @@ import os
 import sys
 sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
 
-import ffutils
 import argparse
 
 def main():
@@ -16,15 +15,9 @@ def main():
     args = parser.parse_args()
     if args.debug:
         os.environ["FFUTILS_DEBUG"] = '1'
-
     exe = os.path.basename(sys.argv[0])
-
-    exit_code = 0
     for filename in args.filenames:
-        font = ffutils.load_font(filename)
-        if font is None:
-            exit_code = 1
-            continue
+        font = fontforge.open(filename)
         if exe == "fontname" or exe == "fontpsname" or exe == "psname":
             print("%-32s  %s" % (font.fontname, filename))
         elif exe == "fontfamily" or exe == "fontfamilyname" or exe == "familyname":
@@ -35,6 +28,4 @@ def main():
             print("%-32s  %s" % (font.weight, filename))
         else:
             print("%-32s  %s" % (font.fontname, filename))
-
-ffutils.import_fontforge()
 main()

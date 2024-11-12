@@ -3,9 +3,7 @@
 
 import os
 import sys
-sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
-
-import ffutils
+import statistics
 import argparse
 
 # https://spencermortensen.com/articles/bezier-circle/
@@ -29,21 +27,13 @@ def main():
     shade_v = 20
 
     for filename in args.filenames:
-        font = ffutils.load_font(filename)
-        if font.is_quadratic:
-            print("%s: font is quadratic; skipping" % filename)
-            continue
-        if font is None:
-            print("%s: not a font" % filename)
-            continue
-        if (not ffutils.font_is_mono(font)) and args.width is None:
-            print("%s: is not monospace; must specify --width" % filename)
-            continue
+        font = fontforge.open(filename)
         if (args.width is not None):
             width = args.width
         else:
-            width = ffutils.top_glyph_width_percentage(font)[3]
-            print("%s: glyph width will be %d" % (filename, width))
+            widths = [glyph.width for glyph in font.glyphs()]
+            widths.sort()
+            width = statistics.median(widths)
         if (args.line_width is not None):
             line_width = args.line_width
         else:
@@ -636,5 +626,4 @@ def clip(glyph):
     glyph.layers['Fore'] += clipContour
     glyph.intersect()
 
-ffutils.import_fontforge()
 main()

@@ -4,9 +4,6 @@
 import os
 import sys
 import errno
-sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
-
-import ffutils
 import argparse
 
 dry_run = False
@@ -24,10 +21,7 @@ def main():
 
     exit_code = 0
     for filename in args.filenames:
-        font = ffutils.load_font(filename)
-        if font is None:
-            exit_code = 1
-            continue
+        font = fontforge.open(filename)
         (dirname, basename) = os.path.split(filename)
         (baseroot, baseext) = os.path.splitext(basename)
 
@@ -70,5 +64,4 @@ def exists(filename):
             return False
         raise e
 
-ffutils.import_fontforge()
 main()

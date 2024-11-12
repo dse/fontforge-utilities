@@ -3,10 +3,7 @@
 
 import os
 import sys
-sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
-
 import re
-import ffutils
 import argparse
 
 def main():
@@ -21,9 +18,7 @@ def main():
         print("load %s" % args.source_filename)
     else:
         print("Loading %s" % args.source_filename)
-        font = ffutils.load_font(args.source_filename)
-        if font is None:
-            exit(1)
+        font = fontforge.open(args.source_filename)
     (source_base, source_ext) = os.path.splitext(args.source_filename)
     for dest_filename in args.dest_filename:
         if re.search(r'^\.[A-Za-z0-9]+$', dest_filename):
@@ -42,5 +37,4 @@ def main():
                 print("Generating %s" % dest_filename)
                 font.generate(dest_filename)
 
-ffutils.import_fontforge()
 main()

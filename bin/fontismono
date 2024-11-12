@@ -4,6 +4,7 @@
 import os
 import fontforge
 import argparse
+import statistics
 
 verbose_level = 0
 quiet_level = 0
@@ -29,48 +30,61 @@ def main():
     parser = argparse.ArgumentParser(description='will your font(s) be detected as monospace?')
     parser.add_argument('filenames', nargs='+')
     parser.add_argument('-v', '--verbose', action=VerboseAction, help='more output, can be repeated')
+    parser.add_argument('-q', '--quiet', action=QuietAction, help='less output, can be repeated')
     args = parser.parse_args()
 
     output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
     exit_code = 0
     for filename in args.filenames:
-        if not check_if_font_is_mono(filename):
-            exit_code = 1
-
-def check_if_font_is_mono(filename):
-    demerits = []
-    caveats = []
-    font = fontforge.open(filename)
-    if font.os2_panose[3] != 9:
-        demerits.append("incorrect value for fourth panose param (should be 9), so not monospace")
-    width_counts = {}
-    for glyph in font.glyphs():
-        width = glyph.width
-        if width in width_counts:
-            width_counts[width] += 1
+        mute()
+        font = fontforge.open(filename)
+        unmute()
+        absolutely = True
+        absolutely_metrically = True
+        metrically_close = True
+        if font.os2_panose[3] != 9:
+            absolutely = False
+            # print("%s: incorrect panose value for 4th item" % filename)
+        widths = [glyph.width for glyph in font.glyphs()]
+        set_of_widths = set(widths)
+        median = statistics.median(widths)
+        close_widths = [width for width in widths if fc_approximately_equal(width, median)]
+        percentage = len(close_widths) / len(widths) * 100
+        if len(widths) < 1:
+            absolutely = False
+            metrically_close = False
+            absolutely_metrically = False
+            # print("%s: no glyphs; not monospace" % filename)
+        elif len(set_of_widths) == 1:
+            print("%s: is monospace" % filename)
+        elif fc_widths_are_mono(widths):
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: is monospace according to fontconfig" % filename)
+        elif fc_widths_are_mono(widths, dual=True):
+            metrically_close = False
+            absolutely = False
+            absolutely_metrically = False
+            # print("%s: likely a dual-space font (FC_DUAL in fontconfig)" % filename)
+        elif percentage >= 99:
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: highly confident this is monospace" % filename)
+        elif percentage >= 95:
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: somewhat confident this is almost monospace" % filename)
         else:
-            width_counts[width] = 1
-    if len(width_counts) < 1:
-        demerits.append("no glyphs, so not monospace")
-    if len(width_counts) == 1:
-        pass                    # :-)
-    elif fc_check_if_font_is_mono(font):
-        caveats.append("glyph widths may vary slightly or font is FC_DUAL")
-    else:
-        demerits.append("glyph widths not unique, so not monospace")
-    if len(demerits):
-        for demerit in demerits:
-            print("%s: DEMERIT - %s" % (filename, demerit))
-    if len(caveats):
-        for caveat in caveats:
-            print("%s: CAVEAT - %s" % (filename, caveat))
-    return len(demerits) == 0
+            metrically_close = False
+            absolutely = False
+            absolutely_metrically = False
+            # print("%s: not monospace" % filename)
 
-def fc_check_if_font_is_mono(font):
+def fc_widths_are_mono(widths, dual=False):
     advances = []
-    for glyph in font.glyphs():
+    for width in widths:
         advance_is_new = True
-        advance = glyph.width
+        advance = width
         if advance == 0:
             continue
         for existing_advance in advances:
@@ -81,12 +95,30 @@ def fc_check_if_font_is_mono(font):
             advances.append(advance)
             if len(advances) > 2:
                 break
-    return (len(advances) == 1 or
-            (len(advances) == 2 and
-             fc_approximately_equal(max(advances[0], advances[1]),
-                                    min(advances[0], advances[1]) * 2)))
+    if dual:
+        return (len(advances) == 2 and
+                fc_approximately_equal(max(advances[0], advances[1]),
+                                       min(advances[0], advances[1]) * 2))
+    return len(advances) == 1
 
 def fc_approximately_equal(x, y):
     return abs(x - y) * 33 <= max(abs(x), abs(y))
+
+stderr_fd = None
+
+def mute():
+    global stderr_fd
+    if stderr_fd is None:
+        stderr_fd = os.dup(2)
+    os.close(2)
+
+def unmute():
+    global stderr_fd
+    if stderr_fd is not None:
+        os.dup2(stderr_fd, 2)
+
+mute()
+import fontforge
+unmute()
 
 main()
