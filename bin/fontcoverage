@@ -4,7 +4,6 @@ import os
 import sys
 import fontforge
 import argparse
-import json
 import unicodeblocks
 # note to self -- on ubuntu systems:
 #     edit ~/.venv/pyvenv.cfg to set:
