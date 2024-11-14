@@ -4,6 +4,8 @@ import os
 import sys
 import fontforge
 import argparse
+import unicodedata
+
 import unicodeblocks
 # note to self -- on ubuntu systems:
 #     edit ~/.venv/pyvenv.cfg to set:
@@ -21,11 +23,13 @@ def main():
         if len(args.filenames) > 1:
             print("%s:" % filename)
         font = fontforge.open(filename)
-        print_coverage_summaries(font, WGL4, "Windows Glyph List 4")
-        print_coverage_summaries(font, CP437, "Code Page 437")
-        print_coverage_summaries(font, AGLFN, "Adobe Glyph List for New Fonts")
-        for block in unicodeblocks.blocks.values():
-            print_coverage_summaries(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
+        run_coverage(font, WGL4, "Windows Glyph List 4")
+        run_coverage(font, CP437, "Code Page 437")
+        run_coverage(font, AGLFN, "Adobe Glyph List for New Fonts")
+        if args.verbose == 0:
+            # only print unicode block info in default verbosity level of 0
+            for block in unicodeblocks.blocks.values():
+                run_coverage(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
 
 WGL4 = [ 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
          0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
@@ -225,7 +229,15 @@ def u(codepoint):
         return "%d" % codepoint
     return "U+%04X" % codepoint
 
-def print_coverage_summaries(font, codepoint_list, name, start='', end=''):
+def run_coverage(font, codepoint_list, name, start='', end=''):
+    global args
+    if args.verbose >= 1:
+        print_uncovered_characters(font, codepoint_list, name, start=start, end=end)
+    else:
+        print_coverage_summary(font, codepoint_list, name, start=start, end=end)
+
+
+def print_coverage_summary(font, codepoint_list, name, start='', end=''):
     coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
     if len(coverage) > 0:
         print("    %6d of %6d = %6.2f%%  %-8s  %-8s  %s" % (
@@ -236,5 +248,22 @@ def print_coverage_summaries(font, codepoint_list, name, start='', end=''):
             end,
             name
         ))
+
+def print_uncovered_characters(font, codepoint_list, name, start='', end=''):
+    coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
+    if len(coverage) == 0:
+        return
+    print("%s" % name)
+    uncoverage = [codepoint for codepoint in codepoint_list if (not(codepoint in font
+                                                                    and font[codepoint].unicode == codepoint)
+                                                                and unicodedata_name(chr(codepoint)) is not None)]
+    for codepoint in uncoverage:
+        print("    %-8s  %s" % (u(codepoint), unicodedata.name(chr(codepoint))))
+
+def unicodedata_name(chr):
+    try:
+        return unicodedata.name(chr)
+    except (KeyError, ValueError):
+        return None
 
 main()
