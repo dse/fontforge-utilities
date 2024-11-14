@@ -15,16 +15,17 @@ def main():
     global args
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
+    parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
     for filename in args.filenames:
         if len(args.filenames) > 1:
             print("%s:" % filename)
         font = fontforge.open(filename)
-        print_coverage(font, WGL4, "Windows Glyph List 4")
-        print_coverage(font, CP437, "Code Page 437")
-        print_coverage(font, AGLFN, "Adobe Glyph List for New Fonts")
+        print_coverage_summaries(font, WGL4, "Windows Glyph List 4")
+        print_coverage_summaries(font, CP437, "Code Page 437")
+        print_coverage_summaries(font, AGLFN, "Adobe Glyph List for New Fonts")
         for block in unicodeblocks.blocks.values():
-            print_coverage(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
+            print_coverage_summaries(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
 
 WGL4 = [ 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
          0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
@@ -224,7 +225,7 @@ def u(codepoint):
         return "%d" % codepoint
     return "U+%04X" % codepoint
 
-def print_coverage(font, codepoint_list, name, start='', end=''):
+def print_coverage_summaries(font, codepoint_list, name, start='', end=''):
     coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
     if len(coverage) > 0:
         print("    %6d of %6d = %6.2f%%  %-8s  %-8s  %s" % (
