@@ -1,0 +1,18 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import argparse
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    indent = "    " if len(args.filenames) > 1 else ""
+    for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("%s:" % filename)
+        font = fontforge.open(filename)
+        for glyph in font.glyphs():
+            if not len(glyph.references):
+                continue
+            print("%-24s  %s" % (glyph.glyphname, " ".join([tuple[0] for tuple in glyph.references])))
+main()
