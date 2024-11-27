@@ -8,24 +8,15 @@ import unicodedata
 
 def main():
     global args
-    parser = argparse.ArgumentParser(description='list glyphs and widths')
+    parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
     args = parser.parse_args()
-
+    indent = "    " if len(args.filenames) > 1 else ""
     for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("%s:" % filename)
         font = fontforge.open(filename)
-        print("%s:" % filename)
         for glyph in font.glyphs():
-            print("    %5d | %-8s | %-32s | %s" % (glyph.width, u(glyph.unicode), glyph.glyphname, name(glyph.unicode)))
-
-def u(codepoint):
-    if codepoint < 0:
-        return "%d" % codepoint
-    return "U+%04X" % codepoint
-
-def name(codepoint):
-    if codepoint < 0:
-        return "-"
-    return unicodedata.name(chr(codepoint), "-")
+            print(indent + "%6d  %s" % (glyph.width, glyph.glyphname))
 
 main()

@@ -2,47 +2,60 @@
 # -*- mode: python; coding: utf-8 -*-
 import argparse
 import unicodedata
-import unicodedataplus
 import unicodeblocks
-
 import os
-stderr_fd = os.dup(2)
-os.close(2)
 import fontforge
-os.dup2(stderr_fd, 2)           # Restore stderr.
-
-parser = argparse.ArgumentParser()
-parser.add_argument("filenames", nargs="+")
-args = parser.parse_args()
 
 blocks = list(unicodeblocks.blocks.values())
 blocks.sort(key=lambda a: a.start)
 
-def u(codepoint):
-    return "U+%04X" % codepoint
-
-for filename in args.filenames:
-    print("%s:" % filename)
-    font = fontforge.open(filename)
-    has_codepoint = {}
-    for glyph in font.glyphs():
-        if glyph.unicode > -1:
-            has_codepoint[glyph.unicode] = True
-    for block in blocks:
-        codepoint_count = 0
-        codepoint_included_count = 0
-        for codepoint in range(block.start, block.end + 1):
-            try:
-                if unicodedata.name(chr(codepoint)) != None:
-                    codepoint_count += 1
-                if codepoint in has_codepoint:
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", nargs="+")
+    args = parser.parse_args()
+    indent = "    " if len(args.filenames) > 1 else ""
+    for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("%s:" % filename)
+        font = fontforge.open(filename)
+        codepoints = [glyph.unicode for glyph in font.glyphs() if glyph.unicode >= 0]
+        for block in blocks:
+            codepoint_count = 0
+            codepoint_included_count = 0
+            for codepoint in range(block.start, block.end + 1):
+                codepoint_count += 1
+                if codepoint in codepoints:
                     codepoint_included_count += 1
-            except ValueError:
-                pass
-        if codepoint_included_count > 0:
-            print("    %6d of %-6d  %6.2f%%  %8s  %8s  %s" % (codepoint_included_count,
-                                                              codepoint_count,
-                                                              (codepoint_included_count / codepoint_count * 100),
-                                                              u(block.start),
-                                                              u(block.end),
-                                                              block.name))
+            if codepoint_included_count > 0:
+                print(indent + "  %6d  %6d  %s" % (codepoint_included_count, codepoint_count,
+                                                   block.name))
+main()
+
+# def u(codepoint):
+#     return "U+%04X" % codepoint
+# for filename in args.filenames:
+#     print("%s:" % filename)
+#     font = fontforge.open(filename)
+#     has_codepoint = {}
+#     for glyph in font.glyphs():
+#         if glyph.unicode > -1:
+#             has_codepoint[glyph.unicode] = True
+#     for block in blocks:
+#         codepoint_count = 0
+#         codepoint_included_count = 0
+#         for codepoint in range(block.start, block.end + 1):
+#             try:
+#                 if unicodedata.name(chr(codepoint)) != None:
+#                     codepoint_count += 1
+#                 if codepoint in has_codepoint:
+#                     codepoint_included_count += 1
+#             except ValueError:
+#                 pass
+#         if codepoint_included_count > 0:
+#             print("    %6d of %-6d  %6.2f%%  %8s  %8s  %s" % (codepoint_included_count,
+#                                                               codepoint_count,
+#                                                               (codepoint_included_count / codepoint_count * 100),
+#                                                               u(block.start),
+#                                                               u(block.end),
+#                                                               block.name))
