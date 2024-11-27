@@ -1,124 +1,124 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 
-# Silence some unwanted diagnostics from when fontforge imports.
 import os
-stderr_fd = os.dup(2)
-os.close(2)
 import fontforge
-os.dup2(stderr_fd, 2)       # restore stderr
-
-import sys
 import argparse
+import statistics
 
-verbosityLevel = 0
-quietLevel = 0
-verbose = False
-quiet = False
+verbose_level = 0
+quiet_level = 0
+is_verbose = False
+is_quiet = False
 
 class VerboseAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        global verbosityLevel, quietLevel, verbose, quiet
-        verbosityLevel += 1
-        verbose = True
-        quiet = False
+        global verbose_level, quiet_level, is_verbose, is_quiet
+        verbose_level += 1
+        is_verbose = True
+        is_quiet = False
 
 class QuietAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        global verbosityLevel, quietLevel, verbose, quiet
-        quietLevel += 1
-        verbose = False
-        quiet = True
+        global verbose_level, quiet_level, is_verbose, is_quiet
+        quiet_level += 1
+        is_verbose = False
+        is_quiet = True
 
-parser = argparse.ArgumentParser(
-    prog='fontismono',
-    description='Detect whether fonts will be selectable in applications like mintty.'
-)
-parser.add_argument('filenames', nargs='+')
+def main():
+    global args
+    parser = argparse.ArgumentParser(description='will your font(s) be detected as monospace?')
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-v', '--verbose', action=VerboseAction, help='more output, can be repeated')
+    parser.add_argument('-q', '--quiet', action=QuietAction, help='less output, can be repeated')
+    args = parser.parse_args()
 
-# Specify nargs=0 along with an action if you need a custom action for
-# an option that takes no argument.
-parser.add_argument('-q', '--quiet', '-quiet', nargs=0, action=QuietAction,
-                    help='decrease level of output')
-parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction,
-                    help='increase level of output')
-parser.add_argument('-m', '--mostly', action='store_true',
-                    help='check if 95% or more of glyphs are the same width')
-parser.add_argument('-p', '--panose', action='store_true',
-                    help='ignore incorrect panose value')
-
-args = parser.parse_args()
-mostly = args.mostly
-allowIncorrectPanose = args.panose
-
-outputLevel = 0
-if verbose:
-    outputLevel = verbosityLevel
-elif quiet:
-    outputLevel = -quietLevel
-
-result = True
-for filename in args.filenames:
-    fontResult = True
-
-    os.close(2)                 # fontforge outputs unwanted diagnostics
-    font = fontforge.open(filename)
-    os.dup2(stderr_fd, 2)       # restore stderr
-
-    if font.os2_panose[3] != 9:
-        if not allowIncorrectPanose:
-            fontResult = False
-            print("%s: ERROR: incorrect panose value" % filename)
-        if outputLevel >= 2:
-            print("%s: panose value is %s; fourth value of tuple should be 9 for monospace fonts" % (filename, str(font.os2_panose)))
-        elif outputLevel >= 1:
-            print("%s: incorrect panose #4 value %d; should be 9 for monospace fonts" % (filename, font.os2_panose[3]))
-
-    glyphWidthCounts = {}       # count of glyphs by glyph width
-    glyphWidthArrays = {}       # array of glyphs by glyph width
-    glyphCount = 0              # count of glyphs in font
-    for glyph in font.glyphs():
-        name = glyph.glyphname
-        width = glyph.width
-        if width in glyphWidthCounts:
-            glyphWidthCounts[width] += 1
-            glyphWidthArrays[width].append(glyph)
+    output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
+    exit_code = 0
+    for filename in args.filenames:
+        mute()
+        font = fontforge.open(filename)
+        unmute()
+        absolutely = True
+        absolutely_metrically = True
+        metrically_close = True
+        if font.os2_panose[3] != 9:
+            absolutely = False
+            # print("%s: incorrect panose value for 4th item" % filename)
+        widths = [glyph.width for glyph in font.glyphs()]
+        set_of_widths = set(widths)
+        median = statistics.median(widths)
+        close_widths = [width for width in widths if fc_approximately_equal(width, median)]
+        percentage = len(close_widths) / len(widths) * 100
+        if len(widths) < 1:
+            absolutely = False
+            metrically_close = False
+            absolutely_metrically = False
+            # print("%s: no glyphs; not monospace" % filename)
+        elif len(set_of_widths) == 1:
+            print("%s: is monospace" % filename)
+        elif fc_widths_are_mono(widths):
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: is monospace according to fontconfig" % filename)
+        elif fc_widths_are_mono(widths, dual=True):
+            metrically_close = False
+            absolutely = False
+            absolutely_metrically = False
+            # print("%s: likely a dual-space font (FC_DUAL in fontconfig)" % filename)
+        elif percentage >= 99:
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: highly confident this is monospace" % filename)
+        elif percentage >= 95:
+            absolutely = False
+            absolutely_metrically = False
+            print("%s: somewhat confident this is almost monospace" % filename)
         else:
-            glyphWidthCounts[width] = 1
-            glyphWidthArrays[width] = [glyph]
-        glyphCount += 1
+            metrically_close = False
+            absolutely = False
+            absolutely_metrically = False
+            # print("%s: not monospace" % filename)
 
-    if len(glyphWidthCounts) != 1: # all glyph widths aren't the same
-        widths = list(glyphWidthCounts.keys())
-        widths.sort(key=lambda w: glyphWidthCounts[w])
-        percentage = glyphWidthCounts[widths[-1]] / glyphCount * 100
-        if mostly and percentage >= 95:
-            if outputLevel >= 2:
-                print("%s: most glyphs, %.2f of them, are %.3f em wide" %
-                      (filename, percentage, widths[-1] / 1000))
-            elif outputLevel >= 1:
-                print("%s: most glyphs are the same width" % filename)
-        else:
-            print("%s: ERROR: %s glyphs are the same width" % (filename, "less than 95% of" if mostly else "not all"))
-            fontResult = False
-            hasMajority = percentage >= 50
-            if hasMajority:
-                if outputLevel >= 2:
-                    print("%s: a majority of glyphs, %.2f of them, are %.3f em wide" %
-                          (filename, percentage, widths[-1] / 1000))
-                elif outputLevel >= 1:
-                    print("%s: a majority of glyphs are the same width" % filename)
-            else:
-                if outputLevel >= 2:
-                    print("%s: inconsistent glyph widths, no majority value" % filename)
+def fc_widths_are_mono(widths, dual=False):
+    advances = []
+    for width in widths:
+        advance_is_new = True
+        advance = width
+        if advance == 0:
+            continue
+        for existing_advance in advances:
+            if fc_approximately_equal(advance, existing_advance):
+                advance_is_new = False
+                break
+        if advance_is_new:
+            advances.append(advance)
+            if len(advances) > 2:
+                break
+    if dual:
+        return (len(advances) == 2 and
+                fc_approximately_equal(max(advances[0], advances[1]),
+                                       min(advances[0], advances[1]) * 2))
+    return len(advances) == 1
 
-    if fontResult:
-        if outputLevel >= 0:
-            print("%s: will be detected as monospace" % filename)
-    else:
-        result = False
-        if outputLevel >= -1:
-            print("%s: will NOT be detected as monospace" % filename)
+def fc_approximately_equal(x, y):
+    return abs(x - y) * 33 <= max(abs(x), abs(y))
 
-if not result:
-    exit(1)
+stderr_fd = None
+
+def mute():
+    global stderr_fd
+    if stderr_fd is None:
+        stderr_fd = os.dup(2)
+    os.close(2)
+
+def unmute():
+    global stderr_fd
+    if stderr_fd is not None:
+        os.dup2(stderr_fd, 2)
+
+mute()
+import fontforge
+unmute()
+
+main()

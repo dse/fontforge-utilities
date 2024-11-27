@@ -1,0 +1,84 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import os
+import sys
+import argparse
+
+# https://spencermortensen.com/articles/bezier-circle/
+C = 0.5519150244935105707435627
+
+def main():
+    global args
+    parser = argparse.ArgumentParser(description="add braille characters to a font")
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument("-n", "--dry-run",   action="store_true", help="make no changes")
+    parser.add_argument("-f", "--force",     action="store_true", help="replace any already-added glyphs")
+    parser.add_argument("-w", "--width",     type=int, help="width of braille characters in em units")
+    parser.add_argument("-W", "--dot-width", type=int, help="width of dots in em units")
+    args = parser.parse_args()
+    for filename in args.filenames:
+        font = fontforge.open(filename, ('fstypepermitted',))
+        if (args.width is not None):
+            width = args.width
+        else:
+            widths = [glyph.width for glyph in font.glyphs()]
+            widths.sort()
+            width = statistics.median(widths)
+        if (args.dot_width is not None):
+            dot_width = args.dot_width
+        else:
+            dot_width = min(font.em / 12, width / 6)
+        r = round(dot_width / 2)
+        dist = min(
+            round(font.em * 4 / 18),
+            round(width * 8 / 18),
+        )
+
+        yc = round((font.ascent - font.descent) / 2)
+        col_1 = round(width / 2) - round(dist / 2)
+        col_2 = round(width / 2) + round(dist / 2)
+        row_1 = round(yc) + round(dist / 2) * 3
+        row_2 = round(yc) + round(dist / 2)
+        row_3 = round(yc) - round(dist / 2)
+        row_4 = round(yc) - round(dist / 2) * 3
+        bit_map = [
+            [col_1, row_1],     # dot 1 = bit 0
+            [col_1, row_2],     # dot 2
+            [col_1, row_3],     # dot 3
+            [col_2, row_1],     # dot 4
+            [col_2, row_2],     # dot 5
+            [col_2, row_3],     # dot 6
+            [col_1, row_4],     # dot 7
+            [col_2, row_4],     # dot 8 = bit 7
+        ];
+        for codepoint in range(0x2800, 0x2900):
+            if codepoint in font:
+                if args.force:
+                    font.removeGlyph(codepoint)
+                else:
+                    print("%s: U+%04X already exists" % (filename, codepoint))
+                    continue
+            glyph = font.createChar(codepoint)
+            pen = glyph.glyphPen()
+            for bit in range(0, 8):
+                if (codepoint >> bit) % 2 == 1:
+                    [x, y] = bit_map[bit]
+                    rr = round(r * C)
+                    if not font.is_quadratic:
+                        pen.moveTo((x, y + r))
+                        pen.curveTo((x + rr, y + r), (x + r, y + rr), (x + r, y))
+                        pen.curveTo((x + r, y - rr), (x + rr, y - r), (x, y - r))
+                        pen.curveTo((x - rr, y - r), (x - r, y - rr), (x - r, y))
+                        pen.curveTo((x - r, y + rr), (x - rr, y + r), (x, y + r))
+                        pen.closePath()
+            glyph.width = width
+            print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
+    (source_base, source_ext) = os.path.splitext(filename)
+    if source_ext == ".sfd":
+        font.save(filename)
+    else:
+        font.generate(filename)
+
+main()

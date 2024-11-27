@@ -1,9 +1,31 @@
-#!/usr/bin/env fontforge
+#!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 
-import fontforge
+import os
 import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../share/py')
 
-for filename in sys.argv[1:]:
-    font = fontforge.open(filename)
-    print("%-38s  %s" % (filename, font.fontname))
+import argparse
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-D', '--debug', action='store_true')
+    args = parser.parse_args()
+    if args.debug:
+        os.environ["FFUTILS_DEBUG"] = '1'
+    exe = os.path.basename(sys.argv[0])
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        if exe == "fontname" or exe == "fontpsname" or exe == "psname":
+            print("%-32s  %s" % (font.fontname, filename))
+        elif exe == "fontfamily" or exe == "fontfamilyname" or exe == "familyname":
+            print("%-32s  %s" % (font.familyname, filename))
+        elif exe == "fontfull" or exe == "fontfullname" or exe == "fullname":
+            print("%-48s  %s" % (font.fullname, filename))
+        elif exe == "fontweight" or exe == "fontweightname" or exe == "weightname":
+            print("%-32s  %s" % (font.weight, filename))
+        else:
+            print("%-32s  %s" % (font.fontname, filename))
+main()

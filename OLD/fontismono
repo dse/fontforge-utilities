@@ -1,0 +1,134 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+# Silence some unwanted diagnostics from when fontforge imports.
+import os
+stderr_fd = os.dup(2)
+os.close(2)
+import fontforge
+os.dup2(stderr_fd, 2)       # restore stderr
+
+import sys
+import argparse
+
+verbosityLevel = 0
+quietLevel = 0
+verbose = False
+quiet = False
+
+class VerboseAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        global verbosityLevel, quietLevel, verbose, quiet
+        verbosityLevel += 1
+        verbose = True
+        quiet = False
+
+class QuietAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        global verbosityLevel, quietLevel, verbose, quiet
+        quietLevel += 1
+        verbose = False
+        quiet = True
+
+parser = argparse.ArgumentParser(
+    prog='fontismono',
+    description='Detect whether fonts will be selectable in applications like mintty.'
+)
+parser.add_argument('filenames', nargs='+')
+
+# Specify nargs=0 along with an action if you need a custom action for
+# an option that takes no argument.
+parser.add_argument('-q', '--quiet', '-quiet', nargs=0, action=QuietAction,
+                    help='decrease level of output')
+parser.add_argument('-v', '--verbose', nargs=0, action=VerboseAction,
+                    help='increase level of output')
+parser.add_argument('-m', '--mostly', action='store_true',
+                    help='check if 95% or more of glyphs are the same width')
+parser.add_argument('-p', '--panose', action='store_true',
+                    help='ignore incorrect panose value')
+
+args = parser.parse_args()
+mostly = args.mostly
+allowIncorrectPanose = args.panose
+
+outputLevel = 0
+if verbose:
+    outputLevel = verbosityLevel
+elif quiet:
+    outputLevel = -quietLevel
+
+result = True
+for filename in args.filenames:
+    fontResult = True
+
+    os.close(2)                 # fontforge outputs unwanted diagnostics
+    font = fontforge.open(filename)
+    os.dup2(stderr_fd, 2)       # restore stderr
+
+    if font.os2_panose[3] != 9:
+        if not allowIncorrectPanose:
+            fontResult = False
+        if outputLevel >= 3:
+            print("%s: panose value is %s; fourth value of tuple should be 9 for monospace fonts" % (filename, str(font.os2_panose)))
+        elif outputLevel >= 2:
+            print("%s: incorrect panose #4 value %d; should be 9 for monospace fonts" % (filename, font.os2_panose[3]))
+        elif outputLevel >= 1:
+            print("%s: ERROR: incorrect panose value" % filename)
+
+    glyphWidthCounts = {}       # count of glyphs by glyph width
+    glyphWidthArrays = {}       # array of glyphs by glyph width
+    glyphCount = 0              # count of glyphs in font
+    for glyph in font.glyphs():
+        name = glyph.glyphname
+        width = glyph.width
+        if width in glyphWidthCounts:
+            glyphWidthCounts[width] += 1
+            glyphWidthArrays[width].append(glyph)
+        else:
+            glyphWidthCounts[width] = 1
+            glyphWidthArrays[width] = [glyph]
+        glyphCount += 1
+
+    percentage = 100
+
+    if len(glyphWidthCounts) != 1: # all glyph widths aren't the same
+        widths = list(glyphWidthCounts.keys())
+        widths.sort(key=lambda w: glyphWidthCounts[w])
+        percentage = glyphWidthCounts[widths[-1]] / glyphCount * 100
+        if mostly and percentage >= 95:
+            if outputLevel >= 2:
+                print("%s: most glyphs, %.2f of them, are %.3f em wide" %
+                      (filename, percentage, widths[-1] / 1000))
+            elif outputLevel >= 1:
+                print("%s: most glyphs are the same width" % filename)
+        else:
+            if outputLevel >= 1:
+                print("%s: ERROR: %s glyphs are the same width" % (filename, "less than 95% of" if mostly else "not all"))
+            fontResult = False
+            hasMajority = percentage >= 50
+            if hasMajority:
+                if outputLevel >= 2:
+                    print("%s: a majority of glyphs, %.2f of them, are %.3f em wide" %
+                          (filename, percentage, widths[-1] / 1000))
+                elif outputLevel >= 1:
+                    print("%s: a majority of glyphs are the same width" % filename)
+            else:
+                if outputLevel >= 2:
+                    print("%s: inconsistent glyph widths, no majority value" % filename)
+
+    if fontResult:
+        if outputLevel >= 0:
+            if mostly:
+                if percentage == 100:
+                    print("%s: is monospace" % filename)
+                else:
+                    print("%s: looks like monospace" % filename)
+            else:
+                print("%s: will be detected as monospace" % filename)
+    else:
+        result = False
+        if outputLevel > -1:
+            print("%s: will NOT be detected as monospace" % filename)
+
+if not result:
+    exit(1)

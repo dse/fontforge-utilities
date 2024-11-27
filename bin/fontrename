@@ -1,0 +1,67 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import sys
+import errno
+import argparse
+
+dry_run = False
+
+def main():
+    global args
+    parser = argparse.ArgumentParser(description="rename one or more fonts using PS names")
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-n', '--dry-run', action='store_true', help="don't take actions, only print them")
+    parser.add_argument('-d', '--directories', action='store_true', help="move fonts into font-family subdirectories")
+    parser.add_argument('-D', '--debug', action='store_true')
+    args = parser.parse_args()
+    if args.debug:
+        os.environ["FFUTILS_DEBUG"] = '1'
+
+    exit_code = 0
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        (dirname, basename) = os.path.split(filename)
+        (baseroot, baseext) = os.path.splitext(basename)
+
+        if args.directories:
+            new_filename = os.path.join(dirname, font.familyname, font.fontname + baseext)
+        else:
+            new_filename = os.path.join(dirname, font.fontname + baseext)
+
+        if filename == new_filename:
+            print("%s: not renaming" % (filename,))
+            continue
+        if exists(new_filename):
+            print("%s: %s already exists" % (filename, new_filename))
+            continue
+        if args.directories:
+            dirname = os.path.dirname(new_filename)
+            if exists(dirname):
+                if not os.path.isdir(dirname):
+                    print("%s: %s is not a directory" % (filename, repr(dirname)))
+                    continue
+            else:
+                if args.dry_run:
+                    print("mkdir %s" % dirname)
+                else:
+                    os.mkdir(dirname)
+        if args.dry_run:
+            print("mv %s %s" % (filename, new_filename))
+        else:
+            try:
+                os.rename(filename, new_filename)
+            except:
+                sys.stderr.write(sys.exception())
+
+def exists(filename):
+    try:
+        stat = os.stat(filename)
+        return True
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            return False
+        raise e
+
+main()
