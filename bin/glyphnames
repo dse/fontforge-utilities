@@ -1,6 +1,7 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 import argparse
+import fontforge
 def main():
     global args
     parser = argparse.ArgumentParser()
