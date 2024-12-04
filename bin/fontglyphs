@@ -19,12 +19,7 @@ def main():
             print("=== %s ===" % filename)
         font = fontforge.open(filename)
         for glyph in font.glyphs():
-            if args.base == 'U':
-                print("%-8s" % u(glyph.unicode), end='')
-            elif args.base == 16:
-                print("%8s" % x(glyph.unicode), end='')
-            elif args.base == 10:
-                print("%8s" % glyph.unicode, end='')
+            print(codepoint_fmt(glyph.unicode), end='')
             print("  %-32s" % glyph.glyphname, end='')
             if args.names:
                 codepoint = glyph.unicode
@@ -35,17 +30,25 @@ def main():
                     if new_codepoint >= 0:
                         codepoint = new_codepoint
                 if codepoint >= 0:
-                    if args.base == 'U':
-                        print("  %-8s" % u(codepoint), end='')
-                    elif args.base == 16:
-                        print("  %8s" % x(codepoint), end='')
-                    elif args.base == 10:
-                        print("  %8s" % codepoint, end='')
+                    print('  ' + codepoint_fmt(glyph.unicode), end='')
                 else:
                     print("%-10s" % "", end='')
                 if codepoint >= 0:
                     print("  " + unicodedata.name(chr(codepoint)), end='')
             print("")
+
+def codepoint_fmt(codepoint):
+    global args
+    if codepoint == -1:
+        return "  (none)"
+    if codepoint < 0:
+        return "%8s" % ("<%d>" % codepoint)
+    if args.base == 'U':
+        return "%-8s" % u(codepoint)
+    if args.base == 16:
+        return "%8s" % x(codepoint)
+    if args.base == 10:
+        return "%8d" % codepoint
 
 def u(codepoint):
     if codepoint < 0:
