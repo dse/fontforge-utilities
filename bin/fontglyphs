@@ -13,35 +13,57 @@ def main():
     parser.add_argument('-x', '--hexadecimal', dest='base', const=16, action='store_const')
     parser.add_argument('-u', '--unicode', dest='base', const='U', action='store_const')
     parser.add_argument('-U', '--names', '--unicode-names', action='store_true')
+    parser.add_argument('-A', '--alt', '--altuni', action='store_true')
     args = parser.parse_args()
     for filename in args.filenames:
         if len(args.filenames) > 1:
-            print("=== %s ===" % filename)
+            write("=== %s ===" % filename)
         font = fontforge.open(filename)
         for glyph in font.glyphs():
-            print(codepoint_fmt(glyph.unicode), end='')
-            print("  %-32s" % glyph.glyphname, end='')
+            write(codepoint_fmt(glyph.unicode))
+            write("  %-32s" % glyph.glyphname)
             if args.names:
                 codepoint = glyph.unicode
                 if codepoint < 0:
                     name = glyph.glyphname
                     name = re.sub(r'(?<=.)\..*$', '', name)
+                    write(" => %s => " % name)
                     new_codepoint = fontforge.unicodeFromName(name)
+                    write(" %s => " % new_codepoint)
                     if new_codepoint >= 0:
                         codepoint = new_codepoint
                 if codepoint >= 0:
-                    print('  ' + codepoint_fmt(glyph.unicode), end='')
-                else:
-                    print("%-10s" % "", end='')
-                if codepoint >= 0:
-                    print("  " + unicodedata.name(chr(codepoint)), end='')
-            print("")
+                    write('  ' + codepoint_fmt(codepoint))
+                    try:
+                        write("  " + unicodedata.name(chr(codepoint)))
+                    except:
+                        pass
+            write("\n")
+            if args.alt and glyph.altuni:
+                for altuni in glyph.altuni:
+                    codepoint = altuni[0]
+                    write("ALT:    ")
+                    write("  %-32s" % "-")
+                    write("  " + codepoint_fmt(codepoint))
+                    if args.names and codepoint > -1:
+                        try:
+                            write("  " + unicodedata.name(chr(codepoint)))
+                        except:
+                            pass
+                    write("\n")
+
+def write(str):
+    print(str, end='')
 
 def codepoint_fmt(codepoint):
     global args
     if codepoint == -1:
-        return "  (none)"
+        if args.base == 'U':
+            return "-       "
+        return "       -"
     if codepoint < 0:
+        if args.base == 'U':
+            return "%-8s" % ("<%d>" % codepoint)
         return "%8s" % ("<%d>" % codepoint)
     if args.base == 'U':
         return "%-8s" % u(codepoint)
