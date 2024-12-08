@@ -79,6 +79,7 @@ def main():
             print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
 
             glyph.comment = json.dumps({
+                "__space__": "com.webonastick.fontcomment",
                 "generator": "fontbraille",
             }, indent=4)
 
