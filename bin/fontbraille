@@ -5,6 +5,7 @@ import fontforge
 import os
 import sys
 import argparse
+import json
 
 # https://spencermortensen.com/articles/bezier-circle/
 C = 0.5519150244935105707435627
@@ -61,6 +62,7 @@ def main():
                     print("%s: U+%04X already exists" % (filename, codepoint))
                     continue
             glyph = font.createChar(codepoint)
+
             pen = glyph.glyphPen()
             for bit in range(0, 8):
                 if (codepoint >> bit) % 2 == 1:
@@ -75,6 +77,11 @@ def main():
                         pen.closePath()
             glyph.width = width
             print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
+
+            glyph.comment = json.dumps({
+                "generator": "fontbraille",
+            }, indent=4)
+
     (source_base, source_ext) = os.path.splitext(filename)
     if source_ext == ".sfd":
         font.save(filename)

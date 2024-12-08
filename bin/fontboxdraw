@@ -5,6 +5,7 @@ import os
 import sys
 import statistics
 import argparse
+import json
 
 # https://spencermortensen.com/articles/bezier-circle/
 C = 0.5519150244935105707435627
@@ -591,6 +592,10 @@ def main():
             glyph.removeOverlap()
 
             print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
+
+            glyph.comment = json.dumps({
+                "generator": "fontboxdraw",
+            }, indent=4)
 
     (source_base, source_ext) = os.path.splitext(filename)
     if source_ext == ".sfd":
