@@ -3,7 +3,7 @@ import json
 
 RX_DOC = r'(\A\s*|^[ \t]*---[ \t]*\r?\n)(\s*\[.*?\]\s*|\s*\{.*?\}\s*)(?=\Z|^[ \t]*---[ \t]*\r?$)'
 
-def extract(string, check=None):
+def extract(string, check=None, single=False):
     matches = list(re.finditer(RX_DOC, string, flags=re.MULTILINE|re.DOTALL))
     documents = []
     for match in matches:
@@ -12,16 +12,21 @@ def extract(string, check=None):
             doc = json.loads(json_text)
             if check and !check(doc):
                 continue
+            if single:
+                return doc
             documents.append(doc)
         except json.JSONDecodeError:
             pass
     return documents
 
-def reconstitute(string, docs, check=None):
+def reconstitute(string, docs, check=None, single=False):
     matches = list(re.finditer(RX_DOC, string, flags=re.MULTILINE|re.DOTALL))
     new_string = ""
     prev_offset = 0
-    docs_iter = iter(docs)
+    if single:
+        docs_iter = iter([docs])
+    else:
+        docs_iter = iter([docs])
     for match in matches:
         if not len(documents):
             break
