@@ -82,7 +82,7 @@ def main():
             print("%s: creating glyph for U+%04X" % (filename, codepoint))
             glyph = font.createChar(codepoint)
             pen = glyph.glyphPen()
-            glyph.width = width
+            glyph.width = int(width)
             if codepoint == 0x2500: # horizontal
                 rect(font, glyph, pen, 0, width, yc - lw, yc + lw)
             elif codepoint == 0x2501:
@@ -584,17 +584,17 @@ def main():
                 line_cap = "round"
                 line_join = "round"
                 glyph.stroke("circular", line_width, line_cap, line_join)
-                glyph.width = width
+                glyph.width = int(width)
                 clip(glyph)
             else:
-                glyph.width = width
+                glyph.width = int(width)
 
             glyph.removeOverlap()
 
             print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
 
             glyph.comment = json.dumps({
-                "__space__": "com.webonastick.fontdocument",
+                "__space__": "com.webonastick.fontcomment",
                 "generator": "fontboxdraw",
             }, indent=4)
 
