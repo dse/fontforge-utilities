@@ -1,7 +1,7 @@
 import re
 import json
 
-RX_DOC = r'(\A\s*|^[ \t]*---[ \t]*\r?\n)(\s*\[.*?\]\s*|\s*\{.*?\}\s*)(?=\Z|^[ \t]*---[ \t]*\r?$)'
+RX_DOC = r'(\A(?:\s*\r?\n)?|^[ \t]*---[ \t]*\r?\n)(\s*\[.*?\]\s*|\s*\{.*?\}\s*)(?=\Z|^[ \t]*---[ \t]*\r?$)'
 
 def extract(string, check=None, single=False):
     matches = list(re.finditer(RX_DOC, string, flags=re.MULTILINE|re.DOTALL))
@@ -10,13 +10,15 @@ def extract(string, check=None, single=False):
         try:
             json_text = match.group(2)
             doc = json.loads(json_text)
-            if check and !check(doc):
+            if check and not check(doc):
                 continue
             if single:
                 return doc
             documents.append(doc)
         except json.JSONDecodeError:
             pass
+    if single:
+        return None
     return documents
 
 def reconstitute(string, docs, check=None, single=False):
@@ -33,7 +35,7 @@ def reconstitute(string, docs, check=None, single=False):
         try:
             json_text = match.group(2)
             old_doc = json.loads(json_text)
-            if check and !check(doc):
+            if check and not check(doc):
                 continue
             # above may raise json.JSONDecodeError, or not.
             new_string += string[prev_offset:match.start(0)] + match.group(1)
@@ -44,3 +46,13 @@ def reconstitute(string, docs, check=None, single=False):
             pass
     new_string += string[prev_offset:]
     return new_string
+
+def doc_says_generated(doc):
+    return (type(doc) == dict and "__space__" in doc and
+            doc["__space__"] == "com.webonastick.fontcomment")
+
+def fontcomment_says_generated(string):
+    if string is None:
+        return False
+    document = extract(string, check=doc_says_generated, single=True)
+    return doc_says_generated(document)
