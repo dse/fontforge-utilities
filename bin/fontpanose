@@ -1,0 +1,38 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import argparse
+
+import os
+import sys
+
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+import silence
+import panosenames
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        silence.on()
+        font = fontforge.open(filename)
+        silence.off()
+        info = list(font.os2_panose)
+        info.append(filename)
+        info = tuple(info)
+        if args.verbose:
+            print("%s:" % filename)
+            for i in range(0, 10):
+                print("    [%2d]  %-32s  [%2d]  %s" % (
+                    i,
+                    panosenames.PANOSE_NAME[font.os2_panose[0]][i],
+                    font.os2_panose[i],
+                    panosenames.PANOSE_VALUE[font.os2_panose[0]][i][font.os2_panose[i]],
+                ))
+        else:
+            print("%3d %3d %3d %3d %3d %3d %3d %3d %3d %3d %s" % info)
+main()
