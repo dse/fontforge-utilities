@@ -39,46 +39,19 @@ def main():
         mute()
         font = fontforge.open(filename)
         unmute()
-        absolutely = True
-        absolutely_metrically = True
-        metrically_close = True
         if font.os2_panose[3] != 9:
-            absolutely = False
-            # print("%s: incorrect panose value for 4th item" % filename)
+            print("%s: incorrect panose value for 4th item" % filename)
+            exit_code = 1
         widths = [glyph.width for glyph in font.glyphs()]
         set_of_widths = set(widths)
-        median = statistics.median(widths)
-        close_widths = [width for width in widths if fc_approximately_equal(width, median)]
-        percentage = len(close_widths) / len(widths) * 100
-        if len(widths) < 1:
-            absolutely = False
-            metrically_close = False
-            absolutely_metrically = False
-            # print("%s: no glyphs; not monospace" % filename)
-        elif len(set_of_widths) == 1:
-            print("%s: is monospace" % filename)
-        elif fc_widths_are_mono(widths):
-            absolutely = False
-            absolutely_metrically = False
-            print("%s: is monospace according to fontconfig" % filename)
-        elif fc_widths_are_mono(widths, dual=True):
-            metrically_close = False
-            absolutely = False
-            absolutely_metrically = False
-            # print("%s: likely a dual-space font (FC_DUAL in fontconfig)" % filename)
-        elif percentage >= 99:
-            absolutely = False
-            absolutely_metrically = False
-            print("%s: highly confident this is monospace" % filename)
-        elif percentage >= 95:
-            absolutely = False
-            absolutely_metrically = False
-            print("%s: somewhat confident this is almost monospace" % filename)
-        else:
-            metrically_close = False
-            absolutely = False
-            absolutely_metrically = False
-            # print("%s: not monospace" % filename)
+        glyph_count = len([glyph for glyph in font.glyphs()])
+        if len(set_of_widths) > 1:
+            print("%s: not all glyph widths are the same" % filename)
+            print("    %s" % (set_of_widths,))
+            for width in set_of_widths:
+                this_width_glyph_count = len([glyph for glyph in font.glyphs() if glyph.width == width])
+                print("    %5d: %d/%d" % (width, this_width_glyph_count, glyph_count))
+            exit_code = 1
 
 def fc_widths_are_mono(widths, dual=False):
     advances = []

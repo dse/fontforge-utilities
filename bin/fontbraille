@@ -6,6 +6,7 @@ import os
 import sys
 import argparse
 import json
+import statistics
 
 # https://spencermortensen.com/articles/bezier-circle/
 C = 0.5519150244935105707435627
@@ -75,7 +76,7 @@ def main():
                         pen.curveTo((x - rr, y - r), (x - r, y - rr), (x - r, y))
                         pen.curveTo((x - r, y + rr), (x - rr, y + r), (x, y + r))
                         pen.closePath()
-            glyph.width = width
+            glyph.width = int(width)
             print("%s: U+%04X width = %d" % (filename, codepoint, glyph.width))
 
             glyph.comment = json.dumps({
