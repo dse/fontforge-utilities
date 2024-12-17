@@ -1,11 +1,6 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
-
-import os
-import fontforge
 import argparse
-import unicodedata
-
 def main():
     global args
     parser = argparse.ArgumentParser()
@@ -17,6 +12,7 @@ def main():
             print("%s:" % filename)
         font = fontforge.open(filename)
         for glyph in font.glyphs():
-            print(indent + "%6d  %s" % (glyph.width, glyph.glyphname))
-
+            if not len(glyph.references):
+                continue
+            print("%-24s  %s" % (glyph.glyphname, " ".join([tuple[0] for tuple in glyph.references])))
 main()

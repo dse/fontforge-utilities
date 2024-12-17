@@ -6,10 +6,13 @@ def main():
     global args
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-D', '--debug', action='store_true')
     args = parser.parse_args()
-    maxlen = max([len(filename) for filename in args.filenames])
+    indent = "    " if len(args.filenames) > 1 else ""
     for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("%s:" % filename)
         font = fontforge.open(filename)
-        print("%-*s %-32s" % (maxlen + 1, filename + ":", font.weight))
+        glyph_names = [glyph.glyphname for glyph in font.glyphs()]
+        for glyph_name in glyph_names:
+            print(indent + glyph_name)
 main()
