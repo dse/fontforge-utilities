@@ -1,0 +1,65 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import argparse
+import fontforge
+import os
+import sys
+import csv
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+from sfntget import sfnt_get
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    args = parser.parse_args()
+    writer = csv.writer(sys.stdout)
+    writer.writerow([
+        'Filename',               # 0
+        'Family',                 # 1
+        'SFNT Family',            # 2
+        'SFNT Preferred Family',  # 3
+        'SFNT WWS Family',        # 4
+        'Full Name',              # 5
+        'SFNT Fullname',          # 6
+        'PS Name',                # 7
+        'SFNT PostScriptName',    # 8
+        'PS Weight',              # 9
+        'SFNT SubFamily',         # 10
+        'SFNT Preferred. Styles', # 11
+        'SFNT WWS Subfamily',     # 12
+        '',                       # 13
+        '',                       # ...
+        'P',
+        'A',
+        'N',
+        'O',
+        'S',
+        'E',
+        '',
+        '',                     # 22
+        'TTF Weight',           # 23
+    ])
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        writer.writerow([
+            os.path.basename(filename),         # 0
+            font.familyname,                    # 1
+            sfnt_get(font, 'Family'),           # 2
+            sfnt_get(font, 'Preferred Family'), # 3
+            sfnt_get(font, 'WWS Family'),       # 4
+            font.fullname,                      # 5
+            sfnt_get(font, 'Fullname'),         # 6
+            font.fontname,                      # 7
+            sfnt_get(font, 'PostScriptName'),   # 8
+            font.weight,                        # 9
+            sfnt_get(font, 'SubFamily'),        # 10
+            sfnt_get(font, 'Preferred Styles'), # 11
+            sfnt_get(font, 'WWS Subfamily'),    # 12
+            *font.os2_panose,                   # 13-22
+            font.os2_weight,                    # 23
+        ])
+        font.close()
+
+main()
