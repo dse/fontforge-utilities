@@ -26,6 +26,7 @@ def main():
         'PS Name',                # 7
         'SFNT PostScriptName',    # 8
         'PS Weight',              # 9
+        'TTF Weight',             # 23
         'SFNT SubFamily',         # 10
         'SFNT Preferred. Styles', # 11
         'SFNT WWS Subfamily',     # 12
@@ -39,7 +40,6 @@ def main():
         'E',
         '',
         '',                     # 22
-        'TTF Weight',           # 23
     ])
     for filename in args.filenames:
         font = fontforge.open(filename)
@@ -54,11 +54,11 @@ def main():
             font.fontname,                      # 7
             sfnt_get(font, 'PostScriptName'),   # 8
             font.weight,                        # 9
+            font.os2_weight,                    # 23
             sfnt_get(font, 'SubFamily'),        # 10
             sfnt_get(font, 'Preferred Styles'), # 11
             sfnt_get(font, 'WWS Subfamily'),    # 12
             *font.os2_panose,                   # 13-22
-            font.os2_weight,                    # 23
         ])
         font.close()
 
