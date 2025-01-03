@@ -2,14 +2,29 @@
 # -*- mode: python; coding: utf-8 -*-
 import argparse
 import fontforge
+import os
+import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+from sfntget import sfnt_get
+
 def main():
     global args
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-D', '--debug', action='store_true')
     args = parser.parse_args()
-    maxlen = max([len(filename) for filename in args.filenames])
+    print("PS Weight                         SubFamily                         Pref Weights                      SFNT SubFamily                    TTF Wt  Panose  Filename")
+    print("--------------------------------  --------------------------------  --------------------------------  --------------------------------  ------  ------  --------------------------------")
     for filename in args.filenames:
         font = fontforge.open(filename)
-        print("%-*s %-32s" % (maxlen + 1, filename + ":", font.weight))
+        print("%-32s  %-32s  %-32s  %-32s  %6d  %6d  %s" % (
+            font.weight,
+            sfnt_get(font, "SubFamily"),
+            sfnt_get(font, "Preferred Styles"),
+            sfnt_get(font, "WWS Subfamily"),
+            font.os2_weight,
+            font.os2_panose[2],
+            filename
+        ))
+        font.close()
+
 main()
