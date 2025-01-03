@@ -1,0 +1,53 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import re
+import os
+import sys
+import argparse
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    exe = os.path.basename(sys.argv[0])
+    for filename in args.filenames:
+        print("%s:" % filename)
+        font = fontforge.open(filename)
+        print(      "                        hhea   hhea+  typo   typo+  win    win+   vhea")
+        print(using("    ascent:      #####  #####  #####  #####  #####  #####  #####") % (font.ascent,
+                                                                                           font.hhea_ascent,
+                                                                                           font.hhea_ascent_add,
+                                                                                           font.os2_typoascent,
+                                                                                           font.os2_typoascent_add,
+                                                                                           font.os2_winascent,
+                                                                                           font.os2_winascent_add))
+        print(using("    descent:     #####  #####  #####  #####  #####  #####  #####") % (font.descent,
+                                                                                           font.hhea_descent,
+                                                                                           font.hhea_descent_add,
+                                                                                           font.os2_typodescent,
+                                                                                           font.os2_typodescent_add,
+                                                                                           font.os2_windescent,
+                                                                                           font.os2_windescent_add))
+        print(using("    linegap:            #####         #####                       #####") % (font.hhea_linegap, font.os2_typolinegap, font.vhea_linegap))
+
+        print("    cap height:  %5d" % font.capHeight)
+        print("    ex height:   %5d" % font.xHeight)
+        print("    em height:   %5d" % font.em)
+        if font.design_size:
+            print("    design size: %5.2f pica points" % font.design_size)
+        else:
+            print("    design size: (none)")
+        print("    u/l posn:    %5d  height  %5d" % (font.upos, font.uwidth))
+        print("    ital angle:  %5.2f  (negative is normal slant)" % (font.italicangle))
+        print("    has vertical metrics?  %-5s" % ("yes" if font.hasvmetrics else "no",))
+        print("        use typo metrics?  %-5s" % ("yes" if font.os2_use_typo_metrics else "no",))
+
+def using(str):
+    str = re.sub(r'\|<+', lambda match: "%%-%ds" % len(match.group(0)), str)
+    str = re.sub(r'\|>+', lambda match: "%%%ds" % len(match.group(0)), str)
+    str = re.sub(r'(#+)\.(#*)', lambda match: "%%%d.%df" % (len(match.group(0)), len(match.group(2))), str)
+    str = re.sub(r'\.(#+)', lambda match: "%%%d.%df" % (len(match.group(0)), len(match.group(1))), str)
+    str = re.sub(r'#+', lambda match: "%%%dd" % len(match.group(0)), str)
+    return str
+
+main()

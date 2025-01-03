@@ -1,0 +1,12 @@
+#!/usr/bin/env fontforge
+# -*- mode: python; coding: utf-8 -*-
+
+import fontforge
+import sys
+import re
+
+for filename in sys.argv[1:]:
+    print("%s:" % filename)
+    font = fontforge.open(filename)
+    print("    ", font.gasp)
+    print("    ", font.getTableData('gasp'))

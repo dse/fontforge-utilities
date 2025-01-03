@@ -1,0 +1,115 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+
+import os
+import sys
+import json
+import argparse
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+from sfntget import sfnt_get
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    parser.add_argument('-j', '--json')
+    args = parser.parse_args()
+    exe = os.path.basename(sys.argv[0])
+    data = []
+    for filename in args.filenames:
+        font = fontforge.open(filename)
+        mac_style_bold      = font.macstyle >= 0 and font.macstyle & 1 != 0
+        mac_style_italic    = font.macstyle >= 0 and font.macstyle & 2 != 0
+        mac_style_underline = font.macstyle >= 0 and font.macstyle & 4 != 0
+        mac_style_outline   = font.macstyle >= 0 and font.macstyle & 8 != 0
+        mac_style_shadow    = font.macstyle >= 0 and font.macstyle & 16 != 0
+        mac_style_condensed = font.macstyle >= 0 and font.macstyle & 32 != 0
+        mac_style_expanded  = font.macstyle >= 0 and font.macstyle & 64 != 0
+        if args.json:
+            item = {
+                "psName": font.fontname,
+                "familyName": font.familyname,
+                "fullName": font.fullname,
+                "psWeight": font.weight,
+                "italicAngle": font.italicangle,
+                "panose": list(font.os2_panose),
+                "comment": font.comment,
+                "copyright": font.copyright,
+                "macFondName": font.fondname,
+                "macStyle": {
+                    "numericValue": font.macstyle,
+                    "bold": mac_style_bold,
+                    "italic": mac_style_italic,
+                    "underline": mac_style_underline,
+                    "outline": mac_style_outline,
+                    "shadow": mac_style_shadow,
+                    "condensed": mac_style_condensed,
+                    "expanded": mac_style_expanded,
+                },
+                "os2FamilyClass": font.os2_family_class,
+                "os2FsType": font.os2_fstype,
+                "os2StyleMap": font.os2_stylemap,
+                "os2Vendor": font.os2_vendor,
+                "os2Version": font.os2_version,
+                "os2Weight": font.os2_weight,
+                "os2Width": font.os2_width,
+                "sfntNames": [{
+                    "lang": record[0],
+                    "strid": record[1],
+                    "string": record[2],
+                } for record in font.sfnt_names],
+                "sfntRevision": font.sfntRevision,
+                "uniqueId": font.uniqueid,
+                "version": font.version,
+                "sfntNamesSelected": {
+                    "family":       sfnt_get(font, 'Family'),
+                    "subfamily":    sfnt_get(font, 'SubFamily'),
+                    "fullname":     sfnt_get(font, 'Fullname'),
+                    "psname":       sfnt_get(font, 'PostScriptName'),
+                    "prefFamily":   sfnt_get(font, 'Preferred Family'),
+                    "prefStyles":   sfnt_get(font, 'Preferred Styles'),
+                    "wwsFamily":    sfnt_get(font, 'WWS Family'),
+                    "wwsSubfamily": sfnt_get(font, 'WWS Subfamily'),
+                },
+            }
+            data.append(item)
+        else:
+            print("%s:" % filename)
+            print("    PostScript Name: %s" % font.fontname)
+            print("    Family Name: %s" % font.familyname)
+            print("    Full Name: %s" % font.fullname)
+            print("    PostScript Weight: %s" % font.weight)
+            print("    Italic Angle: %d" % font.italicangle)
+            print("    Comment: %s" % font.comment)
+            print("    Copyright: %s" % font.copyright)
+            print("    Mac FOND Name: %s" % font.fontname)
+            print("    Mac Style: %d" % font.macstyle)
+            print("        Bold:      %s" % mac_style_bold)
+            print("        Italic:    %s" % mac_style_italic)
+            print("        Underline: %s" % mac_style_underline)
+            print("        Outline:   %s" % mac_style_outline)
+            print("        Shadow:    %s" % mac_style_shadow)
+            print("        Condensed: %s" % mac_style_condensed)
+            print("        Expanded:  %s" % mac_style_expanded)
+            print("    os2:")
+            print("        Family Class: %s" % font.os2_family_class)
+            print("        FS Type: %s" % font.os2_fstype)
+            print("        Stylemap: %s" % font.os2_stylemap)
+            print("        Panose: %s" % list(font.os2_panose))
+            print("        Vendor: %s" % font.os2_vendor)
+            print("        Version: %s" % font.os2_version)
+            print("        Weight: %s" % font.os2_weight)
+            print("        Width: %s" % font.os2_width)
+            print("    sfnt names:")
+            for record in font.sfnt_names:
+                [lang, strid, string] = record
+                print("        %-24s  %-24s  %s" % (lang, strid, string))
+            print("    sfnt Revision: %s" % font.sfntRevision)
+            print("    Unique ID: %s" % font.uniqueid)
+            print("    Version: %s" % font.version)
+        font.close()
+
+    if args.json:
+        print(json.dumps(data, indent=4))
+
+main()

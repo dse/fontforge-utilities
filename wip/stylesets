@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+# -*- mode: python; coding: utf-8 -*-
+import os
+import sys
+import fontforge
+import argparse
+import unicodedata
+import re
+
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        if len(args.filenames) > 1:
+            print("%s:" % filename)
+        font = fontforge.open(filename)
+        # font.gsub_lookups
+        #     returns a tuple of all substitution lookup names.
+        for lookup_name in font.gsub_lookups:
+            # font.getLookupInfo(lookup_name)
+            #     returns a tuple whose entries are
+            #         (lookup_type, lookup_flags, feature_script_lang_tuple)
+            (lookup_type, lookup_flags, feature_script_lang_tuple) = font.getLookupInfo(lookup_name)
+            if lookup_type != "gsub_single":
+                continue
+            print("    gsub lookup name %s" % lookup_name)
+            print("        type %s flags %s fsl %s" % (lookup_type, lookup_flags, feature_script_lang_tuple))
+            for (feature_tag, scripts) in feature_script_lang_tuple:
+                print("            %s" % (feature_tag,))
+                for (script, langs) in scripts:
+                    print("                %s" % (script,))
+                    for lang in langs:
+                        print("                    %s" % (lang,))
+            # font.getLookupSubtables(lookup_name)
+            #     returns a tuple of the names of all the subtables in that lookup
+            print("        subtables:")
+            for subtable_name in font.getLookupSubtables(lookup_name):
+                # font.getLookupSubtables(lookup_name)
+                #     returns a tuple of the names of all the subtables in that lookup
+                print("            %s" % subtable_name)
+                for glyph in font.glyphs():
+                    glyphname = glyph.glyphname
+                    codepoint = glyph.unicode
+                    new_glyphnames = [subst[2] for subst in glyph.getPosSub(subtable_name) if subst[1] == "Substitution"]
+                    if not len(new_glyphnames):
+                        continue
+                    new_glyphname = new_glyphnames[0] # assume there's only one
+                    new_base_glyphname = (new_glyphname.split("."))[0]
+                    new_codepoint = fontforge.unicodeFromName(new_base_glyphname)
+
+                    print("                %-16s %-8s => %-16s %-8s" % (glyphname, u(codepoint), new_glyphname, u(new_codepoint)))
+
+        # for glyph in font.glyphs():
+        # glyph.getPosSub(lookup_subtable_name)
+        #     returns a tuple of tuples, each being:
+        #         (lookup_subtable_name, type, ...)
+        #     type can be one of:
+        #         "Position"
+        #         "Pair"
+        #         "Substitution"
+        #         "AltSubs"
+        #         "MultSubs"
+        #         "Ligature"
+        #     for substitutions:
+        #         (lookup_subtable_name, "Substitution", name_of_new_glyph)
+        #     if lookup_subtable_name is "*", pulls from all subtables
+        # font.getLookupOfSubtable(subtable_name)
+        #     returns the name of the lookup containing the named subtable.
+        # font.getTableData(table_name)
+        #     gets binary data from any saved table: 'fpgm', 'prep', 'cvt ', 'maxp', etc.
+        #     not for BASE, JSTF, GDEF, GPOS, or glyf.
+
+def u(codepoint):
+    if codepoint < 0:
+        return "%d" % codepoint
+    return "U+%04X" % codepoint
+
+main()

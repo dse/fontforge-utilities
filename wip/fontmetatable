@@ -1,0 +1,123 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import os
+import fontforge
+import argparse
+import sys
+sys.path.append(os.path.dirname(sys.argv[0]) + '/../lib')
+from crappytable import crappytable
+from sfntget import sfnt_get
+
+UPRLT = "┌"
+UPRRT = "┐"
+LOWLT = "└"
+LOWRT = "┘"
+HORZ  = "─"
+VERT  = "│"
+HORVT = "┼"
+VERTL = "├"
+VERTR = "┤"
+HZT   = "┬"
+HZB   = "┴"
+
+def main():
+    global args
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('filenames', nargs='+')
+    args = argparser.parse_args()
+    rows = []
+    header = ['Filename',       # 0
+              'Family Name',    # 1
+              'FOND Name',      # 2
+              'PS Name',        # 3
+              'Full Name',      # 4
+              'Weight',         # 5
+              'Italic',         # 6
+              'Styles',         # 7 preferred styles
+              'Subfam',         # 8 wws subfamily
+              'B',
+              'I',
+              'U',
+              'O',
+              'S',
+              'C',
+              'E',
+              '*Fam',           # 16
+              '*FST',           # 17
+              '*Sty',           # 18
+              'P',              # 19 panose 0
+              'A',              # 20        1
+              'N',              # 21        2
+              'O',              # 22        3
+              'S',              # 23        4
+              'E',              # 24        5
+              '',               # 25        6
+              '',               # 26        7
+              '',               # 27        8
+              '',               # 28        9
+              '*Weight'         # 29
+              ]
+    rows.append(header)
+    font = None
+    for filename in args.filenames:
+        if font:
+            font.close()
+        font = fontforge.open(filename)
+        sfnt_family        = sfnt_get(font, 'Family')
+        sfnt_subfamily     = sfnt_get(font, 'SubFamily')
+        sfnt_fullname      = sfnt_get(font, 'Fullname')
+        sfnt_psname        = sfnt_get(font, 'PostScriptName')
+        sfnt_pref_family   = sfnt_get(font, 'Preferred Family')
+        sfnt_pref_styles   = sfnt_get(font, 'Preferred Styles')
+        sfnt_wws_family    = sfnt_get(font, 'WWS Family')
+        sfnt_wws_subfamily = sfnt_get(font, 'WWS Subfamily')
+        rows.append([os.path.splitext(os.path.basename(filename))[0], # 0
+                     font.familyname, # 1
+                     font.fondname,   # 2
+                     font.fontname,   # 3
+                     font.fullname,   # 4
+                     font.weight,     # 5
+                     'N' if font.italicangle == 0 else 'Y', # 6
+                     '',                                    # 7
+                     '',                                    # 8
+                     ('Y' if font.macstyle &  1 != 0 else 'N') if font.macstyle >= 0 else ' ', # 9
+                     ('Y' if font.macstyle &  2 != 0 else 'N') if font.macstyle >= 0 else ' ', # 10
+                     ('Y' if font.macstyle &  4 != 0 else 'N') if font.macstyle >= 0 else ' ', # 11
+                     ('Y' if font.macstyle &  8 != 0 else 'N') if font.macstyle >= 0 else ' ', # 12
+                     ('Y' if font.macstyle & 16 != 0 else 'N') if font.macstyle >= 0 else ' ', # 13
+                     ('Y' if font.macstyle & 32 != 0 else 'N') if font.macstyle >= 0 else ' ', # 14
+                     ('Y' if font.macstyle & 64 != 0 else 'N') if font.macstyle >= 0 else ' ', # 15
+                     font.os2_family_class, # 16
+                     font.os2_fstype,       # 17
+                     font.os2_stylemap,     # 18
+                     *font.os2_panose,      # 19 to 28
+                     font.os2_weight        # 29
+                     ])
+
+        sfnt_row = [None] * len(header)
+        sfnt_row[0] = '(sfnt)'
+        if sfnt_family != None and sfnt_family != '' and sfnt_family != font.familyname:
+            sfnt_row[1] = sfnt_family
+        if sfnt_fullname != None and sfnt_fullname != '' and sfnt_fullname != font.fullname:
+            sfnt_row[4] = sfnt_fullname
+        if sfnt_psname != None and sfnt_psname != '' and sfnt_psname != font.fontname:
+            sfnt_row[3] = sfnt_psname
+        rows.append(sfnt_row)
+
+        sfnt_pref_row = [None] * len(header)
+        sfnt_pref_row[0] = '(sfnt Preferred)'
+        if sfnt_pref_family != None and sfnt_pref_family != '' and sfnt_pref_family != font.familyname:
+            sfnt_pref_row[1] = sfnt_pref_family
+        sfnt_pref_row[7] = sfnt_pref_styles
+        rows.append(sfnt_pref_row)
+
+        sfnt_wws_row = [None] * len(header)
+        sfnt_wws_row[0] = '(sfnt WWS)'
+        if sfnt_wws_family != None and sfnt_wws_family != '' and sfnt_wws_family != font.familyname:
+            sfnt_wws_row[1] = sfnt_wws_family
+        sfnt_wws_row[8] = sfnt_wws_subfamily
+        rows.append(sfnt_wws_row)
+
+    print(crappytable(rows))
+
+main()
