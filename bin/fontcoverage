@@ -30,6 +30,7 @@ def main():
             # only print unicode block info in default verbosity level of 0
             for block in unicodeblocks.blocks.values():
                 run_coverage(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
+        font.close()
 
 WGL4 = [ 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
          0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
