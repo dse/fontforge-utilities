@@ -1,8 +1,17 @@
-class WGL4:
-    pass
+import unicodedata
+
+NON_PRINTING = [
+    'Cc',                       # control
+    'Cf',                       # format
+    'Cn',                       # unassigned
+    'Co',                       # private use
+    'Cs',                       # surrogate
+    'Zl',                       # line separator
+    'Zp',                       # paragraph separator
+]
 
 # Source: https://docs.microsoft.com/en-us/typography/opentype/spec/wgl4
-WGL4.codepoints = [
+WGL4 = [
     0x0020,                     # SPACE
     0x0021,                     # EXCLAMATION MARK
     0x0022,                     # QUOTATION MARK
@@ -661,3 +670,11 @@ WGL4.codepoints = [
     0xfb01,                     # LATIN SMALL LIGATURE FI
     0xfb02                      # LATIN SMALL LIGATURE FL
 ]
+
+WGL4_PRINTING = [
+    codepoint for codepoint in WGL4 if
+    unicodedata.category(chr(codepoint)) not in NON_PRINTING
+]
+
+WGL4.sort()
+WGL4_PRINTING.sort()
