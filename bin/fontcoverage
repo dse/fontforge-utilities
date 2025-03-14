@@ -13,6 +13,16 @@ import unicodeblocks
 #     then run:
 #         sudo apt-get -y install python3-unicodeblocks
 
+NON_PRINTING = [
+    'Cc',                       # control
+    'Cf',                       # format
+    'Cn',                       # unassigned
+    'Co',                       # private use
+    'Cs',                       # surrogate
+    'Zl',                       # line separator
+    'Zp',                       # paragraph separator
+]
+
 def main():
     global args
     parser = argparse.ArgumentParser()
@@ -30,6 +40,7 @@ def main():
             # only print unicode block info in default verbosity level of 0
             for block in unicodeblocks.blocks.values():
                 run_coverage(font, range(block.start, block.end + 1), block.name, u(block.start), u(block.end))
+        font.close()
 
 WGL4 = [ 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027,
          0x0028, 0x0029, 0x002a, 0x002b, 0x002c, 0x002d, 0x002e, 0x002f,
@@ -236,34 +247,50 @@ def run_coverage(font, codepoint_list, name, start='', end=''):
     else:
         print_coverage_summary(font, codepoint_list, name, start=start, end=end)
 
-
 def print_coverage_summary(font, codepoint_list, name, start='', end=''):
-    coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
+    count = len([
+        codepoint for codepoint in codepoint_list if Gc(codepoint) not in NON_PRINTING
+    ])
+    coverage = [
+        codepoint for codepoint in codepoint_list if Gc(codepoint) not in NON_PRINTING and font_has(font, codepoint)
+    ]
     if len(coverage) > 0:
         print("    %6d of %6d = %6.2f%%  %-8s  %-8s  %s" % (
             len(coverage),
-            len(codepoint_list),
-            len(coverage) / len(codepoint_list) * 100,
+            count,
+            len(coverage) / count * 100,
             start,
             end,
             name
         ))
 
 def print_uncovered_characters(font, codepoint_list, name, start='', end=''):
-    coverage = [codepoint for codepoint in codepoint_list if codepoint in font and font[codepoint].unicode == codepoint]
-    if len(coverage) == 0:
+    count = len([
+        codepoint for codepoint in codepoint_list if Gc(codepoint) not in NON_PRINTING
+    ])
+    coverage = [
+        codepoint for codepoint in codepoint_list if Gc(codepoint) not in NON_PRINTING and font_has(font, codepoint)
+    ]
+    if count == 0:
         return
     print("%s" % name)
-    uncoverage = [codepoint for codepoint in codepoint_list if (not(codepoint in font
-                                                                    and font[codepoint].unicode == codepoint)
-                                                                and unicodedata_name(chr(codepoint)) is not None)]
+    uncoverage = [
+        codepoint for codepoint in codepoint_list if Gc(codepoint) not in NON_PRINTING and not font_has(font, codepoint)
+    ]
     for codepoint in uncoverage:
         print("    %-8s  %s" % (u(codepoint), unicodedata.name(chr(codepoint))))
+
+def font_has(font, codepoint):
+    name = fontforge.nameFromUnicode(codepoint)
+    return name in font
 
 def unicodedata_name(chr):
     try:
         return unicodedata.name(chr)
     except (KeyError, ValueError):
         return None
+
+def Gc(codepoint):
+    return unicodedata.category(chr(codepoint))
 
 main()
