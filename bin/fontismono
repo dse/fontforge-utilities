@@ -1,58 +1,46 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
-
-import os
-import fontforge
-import argparse
-import statistics
-
-verbose_level = 0
-quiet_level = 0
-is_verbose = False
-is_quiet = False
-
-class VerboseAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        global verbose_level, quiet_level, is_verbose, is_quiet
-        verbose_level += 1
-        is_verbose = True
-        is_quiet = False
-
-class QuietAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        global verbose_level, quiet_level, is_verbose, is_quiet
-        quiet_level += 1
-        is_verbose = False
-        is_quiet = True
-
+import os, argparse, statistics, functools
 def main():
     global args
-    parser = argparse.ArgumentParser(description='will your font(s) be detected as monospace?')
+    parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-v', '--verbose', action=VerboseAction, help='more output, can be repeated')
-    parser.add_argument('-q', '--quiet', action=QuietAction, help='less output, can be repeated')
+    parser.add_argument('--almost', action='store_true')
+    parser.add_argument('--why', action='store_true')
     args = parser.parse_args()
-
-    output_level = verbose_level if is_verbose else -quiet_level if is_quiet else 0
     exit_code = 0
     for filename in args.filenames:
         mute()
         font = fontforge.open(filename)
         unmute()
-        if font.os2_panose[3] != 9:
-            print("%s: incorrect panose value for 4th item" % filename)
-            exit_code = 1
-        widths = [glyph.width for glyph in font.glyphs()]
-        set_of_widths = set(widths)
-        glyph_count = len([glyph for glyph in font.glyphs()])
-        if len(set_of_widths) > 1:
-            print("%s: not all glyph widths are the same" % filename)
-            print("    %s" % (set_of_widths,))
-            for width in set_of_widths:
-                this_width_glyph_count = len([glyph for glyph in font.glyphs() if glyph.width == width])
-                print("    %5d: %d/%d" % (width, this_width_glyph_count, glyph_count))
-            exit_code = 1
+        # if font.os2_panose[3] != 9:
+        #     print("%s: incorrect panose value for 4th item" % filename)
+        # https://www.high-logic.com/fontcreator/manual15/recommendedglyphs.html
+        checked_glyphs = [glyph for glyph in font.glyphs()
+                          if not (glyph.width == 0 and glyph.glyphname == '.null')]
+        width_list = list(set([glyph.width for glyph in checked_glyphs]))
+        width_counts = {}
+        for width in width_list:
+            width_counts[width] = len([glyph for glyph in checked_glyphs if glyph.width == width])
+        if len(width_list) == 1:
+            print("YES     %s: is monospace" % filename)
+        else:
+            if fc_widths_are_mono(width_list):
+                if args.almost:
+                    print("ALMOST  %s: is ALMOST monospace" % filename)
+                if args.why:
+                    print("ALMOST  %s: almost monospace; most are %d wide; %d are %d wide" % (
+                        filename, width_list[0], width_counts[width_list[1]], width_list[1]))
+            else:
+                if args.why:
+                    width_count_list = list(set(width_counts.values()))
+                    if width_counts[width_list[1]] >= len(checked_glyphs)/2:
+                        print("NO      %s: %d glyphs are %d wide; others are not" % (
+                            filename, width_counts[width_list[0]], width_list[0]))
+                    else:
+                        print("NO      %s: by far not monospace" % filename)
 
+        font.close()
 def fc_widths_are_mono(widths, dual=False):
     advances = []
     for width in widths:
@@ -73,18 +61,15 @@ def fc_widths_are_mono(widths, dual=False):
                 fc_approximately_equal(max(advances[0], advances[1]),
                                        min(advances[0], advances[1]) * 2))
     return len(advances) == 1
-
 def fc_approximately_equal(x, y):
     return abs(x - y) * 33 <= max(abs(x), abs(y))
 
 stderr_fd = None
-
 def mute():
     global stderr_fd
     if stderr_fd is None:
         stderr_fd = os.dup(2)
     os.close(2)
-
 def unmute():
     global stderr_fd
     if stderr_fd is not None:
@@ -93,5 +78,4 @@ def unmute():
 mute()
 import fontforge
 unmute()
-
 main()
