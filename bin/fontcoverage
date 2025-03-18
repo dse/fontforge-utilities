@@ -1,12 +1,13 @@
 #!/usr/bin/env fontforge
 # -*- mode: python; coding: utf-8 -*-
-import os, sys, fontforge, argparse, unicodedata, unicodeblocks
+import os, sys, fontforge, argparse, unicodedata #, unicodeblocks
 # sudo apt-get -y install python3-unicodeblocks
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', nargs='+')
     parser.add_argument('-m', '--missing', action='store_true')
+    parser.add_argument('-L', '--no-ligatures', action='store_true')
     args = parser.parse_args()
     for filename in args.filename:
         print(filename)
@@ -18,12 +19,14 @@ def main():
             [WGL4, "Windows Glyph List 4"],
             [AGLFN, "Adobe Glyph List for New Fonts"],
             [WINDOWS_1252, "Windows 1252 Additional Characters"],
-            [MAC_OS_ROMAN, "Mac OS Roman"],
+            [MAC_OS_ROMAN, "Mac OS Roman (no ff, fi ligatures)" if args.no_ligatures else "Mac OS Roman"],
         ]
         combined_list = [codepoint for listt in lists for codepoint in listt[0]]
+        if args.no_ligatures:
+            combined_list = [unicode for unicode in combined_list if unicode not in range(0xfb00, 0xfb05)]
         lists.append([combined_list, "Combined"])
         for listt in lists:
-            coverage(font, listt[0], listt[1])
+            coverage(font, listt[0], listt[1], ligatures=(not args.no_ligatures))
         if args.missing:
             font_codepoints = list(set([glyph.unicode for glyph in font.glyphs()]))
             missing_codepoints = list(set([
@@ -40,10 +43,12 @@ def main():
                 print("WGL4|"  if codepoint in WGL4             else "-   |",  end='')
                 print("%-8s  %s" % (u(codepoint), charname(codepoint)))
         font.close()
-def coverage(font, codepoint_list, name):
+def coverage(font, codepoint_list, name, ligatures=True):
     codepoints = list(set([
         codepoint for codepoint in codepoint_list if is_printable(codepoint)
     ]))
+    if not ligatures:
+        codepoints = [unicode for unicode in codepoints if unicode not in range(0xfb00, 0xfb05)]
     included = list(set([
         glyph.unicode for glyph in font.glyphs() if is_printable(glyph.unicode) and glyph.unicode in codepoints
     ]))
