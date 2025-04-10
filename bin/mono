@@ -1,0 +1,37 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        mute()
+        font = fontforge.open(filename)
+        unmute()
+        width_list = list(set([glyph.width for glyph in font.glyphs()]))
+        width_counts = {}
+        for width in width_list:
+            width_counts[width] = len([glyph for glyph in font.glyphs()
+                                       if glyph.width == width])
+        width_list.sort(key=lambda width:width_counts[width], reverse=True)
+        if len(width_list) == 1:
+            printf("%s" % filename)
+        elif width_counts[width_list[0]] >= 0.95 * len(font.glyphs()):
+            printf("# %s" % filename)
+
+stderr_fd = None
+def mute():
+    global stderr_fd
+    if stderr_fd is None:
+        stderr_fd = os.dup(2)
+    os.close(2)
+def unmute():
+    global stderr_fd
+    if stderr_fd is not None:
+        os.dup2(stderr_fd, 2)
+
+mute()
+import fontforge
+unmute()
+main()
