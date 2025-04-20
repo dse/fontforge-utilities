@@ -16,9 +16,17 @@ def main():
 
     exit_code = 0
     for filename in args.filenames:
-        silence.on()
-        font = fontforge.open(filename)
-        silence.off()
+        try:
+            silence.on()
+            font = fontforge.open(filename)
+        except OSError as e:
+            if str(e) == 'Open failed':
+                exit_code = 1
+                print("%s: format error or not a font" % filename)
+                continue
+            raise e
+        finally:
+            silence.off()
         (dirname, basename) = os.path.split(filename)
         (baseroot, baseext) = os.path.splitext(basename)
 
