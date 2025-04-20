@@ -54,6 +54,7 @@ def main():
                 os.rename(filename, new_filename)
             except:
                 sys.stderr.write(sys.exception())
+        font.close()
 
 def exists(filename):
     try:
