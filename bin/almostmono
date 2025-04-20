@@ -1,0 +1,129 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import os, argparse, sys
+sys.path.append(os.path.dirname(__file__) + "/../lib")
+import silence, mymonospace
+from myfontutils import u
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        try:
+            silence.on()
+            font = fontforge.open(filename)
+            silence.off()
+        except OSError as err:
+            silence.off()
+            if repr(err) == "OSError('Open failed')":
+                continue
+            sys.stderr.write("=== %s ===" % filename)
+            raise err
+        if mymonospace.font_is_absolutely_monospace(font):
+            font.close()
+            continue
+        elif mymonospace.font_is_absolutely_not_monospace(font):
+            font.close()
+            continue
+
+        print(filename)
+        mymonospace.check_font_monospace(font)
+
+        font.close()
+
+silence.on()
+import fontforge
+silence.off()
+main()
+# import os, argparse, sys
+# sys.path.append(os.path.dirname(__file__) + "/../lib")
+
+# def main():
+#     global args
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('filenames', nargs='+')
+#     args = parser.parse_args()
+#     for filename in args.filenames:
+#         mute()
+#         try:
+#             font = fontforge.open(filename)
+#             unmute()
+#         except OSError as err:
+#             unmute()
+#             if repr(err) == "OSError('Open failed')":
+#                 continue
+#             sys.stderr.write("=== %s ===" % filename)
+#             raise err
+#         try:
+
+#             glyphs = [glyph for glyph in font.glyphs()
+#                       if not glyph_exclude(glyph)]
+#             width_list = list(set([glyph.width for glyph in glyphs]))
+#             width_counts = {}
+#             for width in width_list:
+#                 width_counts[width] = len([glyph for glyph in glyphs
+#                                            if glyph.width == width])
+#             width_list.sort(key=lambda width:width_counts[width], reverse=True)
+#             if len(width_list) == 1:
+#                 font.close()
+#                 continue
+#             if width_counts[width_list[0]] < 0.95 * len(list(glyphs)):
+#                 font.close()
+#                 continue
+#             if len([w for w in width_list if w != 0 and w != width_list[0]]) > 4:
+#                 font.close()
+#                 continue
+
+#             print("%s (%d glyphs, most %d wide)" % (filename, len(list(font.glyphs())), width_list[0]))
+#             for width in width_list[1:]:
+#                 width_count = width_counts[width]
+#                 if width_count < 3:
+#                     for glyph in glyphs:
+#                         if glyph.width == width:
+#                             print("    exception: %6d | %-8s | %-32s" %
+#                                   (glyph.width, u(glyph.unicode), glyph.glyphname))
+#             if font.os2_panose[0] == 2 and font.os2_panose[3] == 9:
+#                 pass
+#             elif font.os2_panose[0] == 3 and font.os2_panose[3] == 3:
+#                 pass
+#             elif font.os2_panose[0] == 0 and font.os2_panose[3] == 9:
+#                 pass
+#             else:
+#                 print("    panose is %s; (1st,4th) digits normally (2,9) or (3,3)" % (font.os2_panose,))
+#             # (0, 9) is apparently allowed
+
+#         except UnicodeDecodeError as error:
+#             sys.stderr.write("=== %s ===" % filename)
+#             sys.stderr.write(repr(error))
+#             font.close()
+#             continue
+#         font.close()
+
+# stderr_fd = None
+# def mute():
+#     global stderr_fd
+#     if stderr_fd is None:
+#         stderr_fd = os.dup(2)
+#     os.close(2)
+# def unmute():
+#     global stderr_fd
+#     if stderr_fd is not None:
+#         os.dup2(stderr_fd, 2)
+
+# def u(codepoint):
+#     if codepoint < 0:
+#         return "%d" % codepoint
+#     return "U+%04X" % codepoint
+
+# def glyph_exclude(glyph):
+#     if glyph.glyphname == ".notdef" and glyph.unicode < 0 and glyph.width == 0: # OK FOR WSLTTY/MINTTY
+#         return True
+#     if glyph.glyphname == ".null" and glyph.unicode < 0 and glyph.width == 0: # OK FOR WSLTTY/MINTTY
+#         return True
+#     return False
+
+# mute()
+# import fontforge
+# unmute()
+# main()
