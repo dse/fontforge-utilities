@@ -37,10 +37,12 @@ def main():
 
         if filename == new_filename:
             print("%s: not renaming" % (filename,))
+            font.close()
             continue
         if exists(new_filename):
             exit_code = 1
             print("%s: %s already exists" % (filename, new_filename))
+            font.close()
             continue
         if args.directories:
             dirname = os.path.dirname(new_filename)
@@ -48,6 +50,7 @@ def main():
                 if not os.path.isdir(dirname):
                     exit_code = 1
                     print("%s: %s is not a directory" % (filename, repr(dirname)))
+                    font.close()
                     continue
             else:
                 if args.dry_run:
@@ -62,6 +65,7 @@ def main():
             except e:
                 print(str(e))
                 exit_code = 1
+                font.close()
                 continue
         font.close()
 
