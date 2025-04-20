@@ -12,10 +12,7 @@ def main():
     parser.add_argument('filenames', nargs='+')
     parser.add_argument('-n', '--dry-run', action='store_true', help="don't take actions, only print them")
     parser.add_argument('-d', '--directories', action='store_true', help="move fonts into font-family subdirectories")
-    parser.add_argument('-D', '--debug', action='store_true')
     args = parser.parse_args()
-    if args.debug:
-        os.environ["FFUTILS_DEBUG"] = '1'
 
     exit_code = 0
     for filename in args.filenames:
