@@ -1,6 +1,8 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
 import os, sys, errno, argparse
+sys.path.append(os.path.dirname(__file__) + "/../lib")
+import silence
 
 dry_run = False
 
@@ -17,7 +19,9 @@ def main():
 
     exit_code = 0
     for filename in args.filenames:
+        silence.on()
         font = fontforge.open(filename)
+        silence.off()
         (dirname, basename) = os.path.split(filename)
         (baseroot, baseext) = os.path.splitext(basename)
 
