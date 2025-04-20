@@ -3,19 +3,12 @@
 import os, sys, errno, argparse
 sys.path.append(os.path.dirname(__file__) + "/../lib")
 import silence
-
-dry_run = False
-
 def main():
     global args
     parser = argparse.ArgumentParser(description="rename one or more fonts using PS names")
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-n', '--dry-run', action='store_true', help="don't take actions, only print them")
     parser.add_argument('-d', '--directories', action='store_true', help="move fonts into font-family subdirectories")
     args = parser.parse_args()
-
-    dry_run_file_exists = {}
-    dry_run_dir_exists = {}
     exit_code = 0
     for filename in args.filenames:
         try:
@@ -41,7 +34,7 @@ def main():
             print("%s: not renaming" % (filename,))
             font.close()
             continue
-        if (new_filename in dry_run_file_exists) or exists(new_filename):
+        if exists(new_filename):
             exit_code = 1
             print("%s: %s already exists" % (filename, new_filename))
             font.close()
@@ -55,22 +48,14 @@ def main():
                     font.close()
                     continue
             else:
-                if args.dry_run:
-                    print("mkdir %s" % dirname)
-                    dry_run_dir_exists[dirname] = True
-                else:
-                    os.mkdir(dirname)
-        if args.dry_run:
-            print("mv %s %s" % (filename, new_filename))
-            dry_run_file_exists[new_filename] = True
-        else:
-            try:
-                os.rename(filename, new_filename)
-            except e:
-                print(str(e))
-                exit_code = 1
-                font.close()
-                continue
+                os.mkdir(dirname)
+        try:
+            os.rename(filename, new_filename)
+        except e:
+            print(str(e))
+            exit_code = 1
+            font.close()
+            continue
         font.close()
 
 def exists(filename):
