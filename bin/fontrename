@@ -17,7 +17,7 @@ def main():
         except OSError as e:
             if str(e) == 'Open failed':
                 exit_code = 1
-                print("%s: format error or not a font" % filename)
+                sys.stderr.write("%s: format error or not a font\n" % filename)
                 continue
             raise e
         finally:
@@ -31,12 +31,12 @@ def main():
             new_filename = os.path.join(dirname, font.fontname + baseext)
 
         if filename == new_filename:
-            print("%s: not renaming" % (filename,))
+            sys.stderr.write("%s: not renaming\n" % (filename,))
             font.close()
             continue
         if exists(new_filename):
             exit_code = 1
-            print("%s: %s already exists" % (filename, new_filename))
+            sys.stderr.write("%s: %s already exists\n" % (filename, new_filename))
             font.close()
             continue
         if args.directories:
@@ -44,7 +44,7 @@ def main():
             if exists(dirname):
                 if not os.path.isdir(dirname):
                     exit_code = 1
-                    print("%s: %s is not a directory" % (filename, repr(dirname)))
+                    sys.stderr.write("%s: %s is not a directory\n" % (filename, repr(dirname)))
                     font.close()
                     continue
             else:
