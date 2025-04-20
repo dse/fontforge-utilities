@@ -1,15 +1,49 @@
 #!/usr/bin/env -S fontforge -quiet
 # -*- mode: python; coding: utf-8 -*-
-import argparse
-import fontforge
+import argparse, fontforge, os, sys, csv, io
+sys.path.append(os.path.dirname(__file__) + "/../lib")
+import silence, progname
 def main():
     global args
     parser = argparse.ArgumentParser()
     parser.add_argument('filenames', nargs='+')
-    parser.add_argument('-D', '--debug', action='store_true')
+    parser.add_argument('--format', choices=['txt', 'csv', 'tsv'], default='txt')
     args = parser.parse_args()
     maxlen = max([len(filename) for filename in args.filenames])
     for filename in args.filenames:
+        silence.on()
         font = fontforge.open(filename)
-        print("%-*s %-32s" % (maxlen + 1, filename + ":", font.fontname))
+        silence.off()
+        prog = progname.progname_no_ext()
+        if prog == 'fontname':
+            print(output_line([filename, maxlen], font.fontname))
+        elif prog == 'fullname':
+            print(output_line([filename, maxlen], font.familyname))
+        elif prog == 'familyname':
+            print(output_line([filename, maxlen], font.familyname))
+        elif prog == 'fontnames':
+            print(output_line([filename, maxlen], 'fontname  ', font.fontname))
+            print(output_line([filename, maxlen], 'fullname  ', font.fullname))
+            print(output_line([filename, maxlen], 'familyname', font.familyname))
+            print(output_line([filename, maxlen], 'weight    ', font.weight))
+        else:
+            raise Exception("don't know how to run as %s" % progname_no_ext())
+        font.close()
+def output_field(field):
+    if type(field) == str:
+        return field
+    if type(field) == list and len(field) == 2 and type(field[0] == str) and type(field[1] == int):
+        return "%-*s" % (field[1], field[0])
+    raise Exception("output_field: invalid data")
+def output_line(*params):
+    global args
+    if args.format == 'txt':
+        return '  '.join([output_field(field) for field in params])
+    strings = [(field[0] if type(field) == list else field) for field in params]
+    if args.format == 'tsv':
+        return "\t".join(strings)
+    if args.format == 'csv':
+        output = io.StringIO()
+        csv.writer(output).writerow(strings)
+        return output.getvalue().rstrip()
 main()

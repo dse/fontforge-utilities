@@ -676,5 +676,7 @@ WGL4_PRINTING = [
     unicodedata.category(chr(codepoint)) not in NON_PRINTING
 ]
 
+WGL4 = list(set(WGL4))
 WGL4.sort()
+WGL4 = list(set(WGL4_PRINTING))
 WGL4_PRINTING.sort()

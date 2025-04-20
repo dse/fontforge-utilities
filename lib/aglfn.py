@@ -87,9 +87,14 @@ AGLFN = [
     0x0030, 0x03b6
 ]
 
-AGLFN.sort()
 
 AGLFN_PRINTING = [
     codepoint for codepoint in AGLFN if
     unicodedata.category(chr(codepoint)) not in NON_PRINTING
 ]
+
+AGLFN = list(set(AGLFN))
+AGLFN_PRINTING = list(set(AGLFN_PRINTING))
+
+AGLFN.sort()
+AGLFN_PRINTING.sort()
