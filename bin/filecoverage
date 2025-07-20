@@ -1,0 +1,31 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import fontforge, sys, argparse
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('font_filename')
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+
+    font = fontforge.open(args.font_filename)
+    font_has_codepoint = {}
+    for glyph in font.glyphs():
+        if glyph.unicode < 32 or glyph.unicode in range(128, 160):
+            continue
+        font_has_codepoint[glyph.unicode] = True
+    font.close()
+
+    text_has_codepoint = {}
+    for filename in args.filenames:
+        with open(filename, 'r') as f:
+            for line in f:
+                for char in line:
+                    if ord(char) < 32 or ord(char) in range(128, 160):
+                        continue
+                    text_has_codepoint[ord(char)] = True
+
+    for key in text_has_codepoint.keys():
+        if not key in font_has_codepoint:
+            print("%d missing" % key)
+main()

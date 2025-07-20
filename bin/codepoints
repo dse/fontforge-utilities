@@ -1,0 +1,41 @@
+#!/usr/bin/env -S fontforge -quiet
+# -*- mode: python; coding: utf-8 -*-
+import fontforge, sys, argparse
+def main():
+    global args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filenames', nargs='*')
+    args = parser.parse_args()
+    total_counts = {}
+    filenames = args.filenames
+    stdin_read = False
+    if not len(filenames):
+        filenames.append('-')
+    for filename in filenames:
+        try:
+            font = fontforge.open(filename)
+            for glyph in font.glyphs():
+                if glyph.unicode < 0:
+                    continue
+                char = chr(glyph.unicode)
+                total_counts[char] = (total_counts[char] if char in total_counts else 0) + 1
+            font.close()
+        except OSError as e:
+            if str(e) != "Open failed":
+                raise e
+            if filename == '-':
+                if not stdin_read:
+                    file = sys.stdin
+                else:
+                    raise Exception("Cannot read from stdin more than once.\n" +
+                                    "If you meant a file called \"-\", use \"./-\".")
+            else:
+                file = open(filename, 'r')
+            for line in file:
+                for char in line:
+                    total_counts[char] = (total_counts[char] if char in total_counts else 0) + 1
+    keys = list(total_counts.keys())
+    keys.sort()
+    for key in keys:
+        print("%d" % ord(key))
+main()
