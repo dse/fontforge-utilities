@@ -8,53 +8,64 @@ def main():
     parser = argparse.ArgumentParser(description="rename one or more fonts using PS names")
     parser.add_argument('filenames', nargs='+')
     parser.add_argument('-d', '--directories', action='store_true', help="move fonts into font-family subdirectories")
+    parser.add_argument('-i', '--invalids', action='store_true')
     args = parser.parse_args()
     exit_code = 0
     for filename in args.filenames:
+        print("=== %s ===" % filename)
+        (dirname, basename) = os.path.split(filename)
+        (baseroot, baseext) = os.path.splitext(basename)
+        if os.path.isdir(filename):
+            sys.stderr.write("%s: is a directory\n" % filename)
+            continue
         try:
             silence.on()
             font = fontforge.open(filename)
-        except OSError as e:
-            if str(e) == 'Open failed':
-                exit_code = 1
-                sys.stderr.write("%s: format error or not a font\n" % filename)
-                continue
-            raise e
-        finally:
             silence.off()
-        (dirname, basename) = os.path.split(filename)
-        (baseroot, baseext) = os.path.splitext(basename)
-
-        if args.directories:
-            new_filename = os.path.join(dirname, font.familyname, font.fontname + baseext)
-        else:
-            new_filename = os.path.join(dirname, font.fontname + baseext)
-
-        if filename == new_filename:
-            sys.stderr.write("%s: not renaming\n" % (filename,))
-            font.close()
-            continue
-        if exists(new_filename):
-            exit_code = 1
-            sys.stderr.write("%s: %s already exists\n" % (filename, new_filename))
-            font.close()
-            continue
-        if args.directories:
-            dirname = os.path.dirname(new_filename)
-            if exists(dirname):
-                if not os.path.isdir(dirname):
-                    exit_code = 1
-                    sys.stderr.write("%s: %s is not a directory\n" % (filename, repr(dirname)))
-                    font.close()
+        except OSError as e:
+            silence.off()
+            if str(e) == 'Open failed':
+                if not args.invalids:
+                    sys.stderr.write("%s: invalid font or not a font" % filename)
                     continue
-            else:
-                os.mkdir(dirname)
+                new_filename = os.path.join(dirname, 'invalid', basename)
+                os.makedirs(os.path.dirname(new_filename), exist_ok=True)
+                os.rename(filename, new_filename)
+                continue
+            sys.stderr.write("%s:\n" % filename)
+            raise e
+        except Exception as e:
+            silence.off()
+            sys.stderr.write("%s:\n" % filename)
+            raise e
         try:
+            if font.familyname is None:
+                sys.stderr.write("%s: no font.familyname\n" % filename)
+            if font.fontname is None:
+                sys.stderr.write("%s: no font.fontname\n" % filename)
+            if font.familyname is None or font.fontname is None:
+                exit_code = 1
+                font.close()
+                continue
+            if args.directories:
+                new_filename = os.path.join(dirname, font.familyname, font.fontname + baseext)
+            else:
+                new_filename = os.path.join(dirname, font.fontname + baseext)
+            if filename == new_filename:
+                sys.stderr.write("%s: not renaming\n" % (filename,))
+                font.close()
+                continue
+            if exists(new_filename):
+                exit_code = 1
+                sys.stderr.write("%s: %s already exists\n" % (filename, new_filename))
+                font.close()
+                continue
+            if args.directories:
+                os.makedirs(os.path.dirname(new_filename), exist_ok=True)
             os.rename(filename, new_filename)
-        except e:
-            print(str(e))
-            exit_code = 1
+        except UnicodeDecodeError as e:
             font.close()
+            exit_code = 1
             continue
         font.close()
 
