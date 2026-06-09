@@ -1,4 +1,4 @@
-#!/usr/bin/env fontforge
+#!/usr/bin/env fontforge -script
 # -*- mode: python; coding: utf-8 -*-
 import os, sys, fontforge, argparse, unicodedata #, unicodeblocks
 # sudo apt-get -y install python3-unicodeblocks
