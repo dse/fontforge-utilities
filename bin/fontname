@@ -1,4 +1,4 @@
-#!/usr/bin/env -S fontforge -quiet
+#!/usr/bin/env -S fontforge -script
 # -*- mode: python; coding: utf-8 -*-
 import argparse, fontforge, os, sys, csv, io
 sys.path.append(os.path.dirname(__file__) + "/../lib")
@@ -18,14 +18,25 @@ def main():
         if prog == 'fontname':
             print(output_line([filename, maxlen], font.fontname))
         elif prog == 'fullname':
-            print(output_line([filename, maxlen], font.familyname))
+            print(output_line([filename, maxlen], font.fullname))
         elif prog == 'familyname':
             print(output_line([filename, maxlen], font.familyname))
+        elif prog == 'weightname':
+            print(output_line([filename, maxlen], font.weight))
+        elif prog == 'italicangle':
+            print(output_line([filename, maxlen], font.italicangle))
+        elif prog == 'macstyle':
+            print(output_line([filename, maxlen], font.macstyle))
+        elif prog == 'stylemap':
+            print(output_line([filename, maxlen], font.os2_stylemap))
         elif prog == 'fontnames':
             print(output_line([filename, maxlen], 'fontname  ', font.fontname))
             print(output_line([filename, maxlen], 'fullname  ', font.fullname))
             print(output_line([filename, maxlen], 'familyname', font.familyname))
             print(output_line([filename, maxlen], 'weight    ', font.weight))
+            print(output_line([filename, maxlen], 'italicangle', font.italicangle))
+            print(output_line([filename, maxlen], 'macstyle', font.macstyle))
+            print(output_line([filename, maxlen], 'os2_stylemap', font.os2_stylemap))
         else:
             raise Exception("don't know how to run as %s" % progname_no_ext())
         font.close()
@@ -34,6 +45,8 @@ def output_field(field):
         return field
     if type(field) == list and len(field) == 2 and type(field[0] == str) and type(field[1] == int):
         return "%-*s" % (field[1], field[0])
+    if type(field) == int or type(field) == float:
+        return str(field)
     raise Exception("output_field: invalid data")
 def output_line(*params):
     global args
