@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S fontforge -quiet -script
 import fontforge
 import getopt
 import sys
