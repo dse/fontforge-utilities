@@ -1,4 +1,4 @@
-#!/usr/bin/env -S fontforge -quiet -script
+#!/usr/bin/env -S fontforge -quiet -lang=py -script
 # -*- mode: python; coding: utf-8 -*-
 
 # Silence some unwanted diagnostics from when fontforge imports.
